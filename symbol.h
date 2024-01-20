@@ -38,4 +38,14 @@ SYMB *addSymb(SYMB *p, char *name, double value)
 	return p;
 }
 
+/* printTree: in-order print of tree p */
+void printTree(SYMB *p)
+{
+	if (p != NULL) {
+		printTree(p->left);
+		printf("%s ", p->name);
+		printTree(p->right);
+	}
+}
+
 #endif	/* SYMBOL_H */
