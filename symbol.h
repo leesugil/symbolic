@@ -5,11 +5,14 @@
 #include <complex.h>
 #include <string.h>
 
+#include "constants.h"
+
 struct symbol {
 	char *name;
 	double value;			/* complex to be added later */
-	struct symbol *left;		/* for binary tree */
-	struct symbol *right;		/* for binary tree */
+	unsigned int power;			/* this is for displaying power correctly */
+	struct symbol *left;	/* for binary tree */
+	struct symbol *right;	/* for binary tree */
 };
 
 typedef struct symbol SYMB;
@@ -27,9 +30,12 @@ SYMB *addSymb(SYMB *p, char *name, double value)
 		p = symbAlloc();
 		p->name = strdup(name);
 		p->value = value;
+		p->power = 1;
+		p->left = NULL;
+		p->right = NULL;
 	} else if ((cond = strcmp(name, p->name)) == 0) {
-		fprintf(stderr, "updating %s: %g -> %g\n", p->name, p->value, value);
 		p->value = value;
+		p->power++;
 	} else if (cond < 0)
 		p->left = addSymb(p->left, name, value);
 	else
@@ -43,9 +49,29 @@ void printTree(SYMB *p)
 {
 	if (p != NULL) {
 		printTree(p->left);
-		printf("%s ", p->name);
+		printf("%s", p->name);
+		if (p->power > 1)
+			printf("^%u", p->power);
+		printf(" ");
 		printTree(p->right);
 	}
+}
+
+void printNum(SYMB *p)
+{
+	if (p != NULL) {
+		printTree(p);
+	} else
+		printf("1 ");
+}
+
+void printDenom(SYMB *p)
+{
+	if (p != NULL) {
+		printf("/ ");
+		printTree(p);
+	}
+	printf("\b\n");
 }
 
 #endif	/* SYMBOL_H */
