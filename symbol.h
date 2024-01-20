@@ -74,4 +74,19 @@ void printDenom(SYMB *p)
 	printf("\b\n");
 }
 
+/* lookUpTree: returns SYMB * if finds a SYMB in a given tree with the same name */
+SYMB *lookUpTree(SYMB *p, char* name)
+{
+	int cond;
+
+	if (p == NULL)
+		return NULL;
+	else if ((cond = strcmp(p->name, name)) == 0)
+		return p;
+	else if (cond < 0)
+		return lookUpTree(p->left, name);
+	else
+		return lookUpTree(p->right, name);
+}
+
 #endif	/* SYMBOL_H */

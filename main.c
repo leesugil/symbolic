@@ -19,9 +19,12 @@ int main(int argc, char *argv[])
 	double value = 0.0;
 	SYMB *num = NULL;
 	SYMB *denom = NULL;
+	SYMB *var = NULL;
 
-	printf("input (n)umerator, input (d)enominator\n");
-	while (scanf("%s", c) == 1) {
+	char *input_command = "input: (n)umerator, (d)enominator, (l)ook-up";
+
+	while (printf("%s\n", input_command) == strlen(input_command)+1
+			&& scanf("%s", c) == 1)
 		switch(c[0]) {
 			case 'n':
 				printf("registering numerator\n");
@@ -40,11 +43,18 @@ int main(int argc, char *argv[])
 				 * the default value should be obvious. */
 				printf("provide the numerator: ");
 				break;
+			case 'l':
+				printf("looking up a variable name\n");
+				scanf("%s", name);
+				var = lookUpTree(num, name);
+				if (var == NULL)
+					printf("%s not found\n", name);
+				else
+					printf("%s found!\n", var->name);
+				break;
 			default:
 				printf("invalid command! '%s' pressed!\n", c);
 				break;
-		}
-		printf("input (n)umerator, input (d)enominator\n");
 	}
 	printNum(num);
 	printDenom(denom);
