@@ -19,9 +19,20 @@ int main(int argc, char *argv[])
 	double value = 0.0;
 	SYMB *num = NULL;
 	SYMB *denom = NULL;
+	SYMB *root = NULL;
 	SYMB *var = NULL;
+	char *line = NULL;
+	size_t maxline = 0;
 
 	char *input_command = "input: (n)umerator, (d)enominator, (l)ook-up";
+
+	/* change of structure
+	 * accept line and parse */
+	
+	while (getline(&line, &maxline, stdin) > 0) {
+		/* parse line to detect definition, LHS, and RHS */
+		parseSymb(root, line);
+	}
 
 	while (printf("%s\n", input_command) == strlen(input_command)+1
 			&& scanf("%s", c) == 1)
