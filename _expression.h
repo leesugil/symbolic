@@ -7,6 +7,7 @@
 #include "variable.h"
 
 struct expression {
+	char *content;				/* in human-readible expression */
 	OP *op;
 	VAR *var;					/* only for atom */
 	struct expression *x1;		/* NULL if atom */
