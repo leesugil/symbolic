@@ -4,6 +4,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <ctype.h>
+
+#include "operation.h"
 
 struct expression {
 	char *_content;				/* original text used to create obj */
@@ -20,17 +23,80 @@ static EXPR *exprAlloc(void)
 	return (EXPR *) malloc(sizeof(EXPR));
 }
 
+static char *OP_DIV[] = {
+	" + ",
+	" - ",
+	" * ",
+	" / ",
+	" % ",
+	" ^ "
+};
+
+static unsigned int OP_DIV_N = sizeof(OP_DIV) / sizeof(OP_DIV[0]);
+
+static char *DEFN_DIV[] = {
+	", ",
+	" = "
+};
+
+static unsigned int DEFN_DIV_N = sizeof(DEFN_DIV) / sizeof(DEFN_DIV[0]);
+
+static char *EQN_DIV[] = {
+	" == ",
+	" > ",
+	" >= ",
+	" < ",
+	" <= "
+};
+
+static unsigned int EQN_DIV_N = sizeof(EQN_DIV) / sizeof(EQN_DIV[0]);
+
+/* parseExpr: divides mathematical expressions or statements and returns the first piece */
 char *parseExpr(char **line)
 {
-	/* parse f, a, b, for f(a, b) */
-	char output[2];
-	output[0] = (*line)[0];
-	output[1] = '\0';
-	if (strlen(*line) > 0) {
-		(*line)++;
+	fprintf(stderr, "parseExpr: parsing \"%s\"\n", *line);
+	int i, n;
+	char *s = NULL, *t = NULL;
+
+	/* remove empty spaces?
+	while (isspace(**line))
+		(*line)++; */
+	
+	/* detect definition by " = ", ", " */
+	/* x = 1.2, y = -3.4e-5 */
+	/* f(x, y) = x^2 + y^2 */
+	for (i = 0; i < DEFN_DIV_N; i++) {
+		fprintf(stderr, "parseExpr: DEFN_DIV[%d] = \"%s\"\n", i, DEFN_DIV[i]);
+		if((s = strstr(*line, DEFN_DIV[i])) != NULL) {
+			/* DEFN_DIV[i] detected */
+			fprintf(stderr, "parseExpr: DEFN_DIV[%d] = \"%s\" detected, s = \"%s\", *line = \"%s\"\n", i, DEFN_DIV[i], s, *line);
+			/* get the first part */
+			if ((n = s - *line) == 0) {
+				fprintf(stderr, "parseExpr: s == *line, parsing \"%s\"\n", DEFN_DIV[i]);
+				/* means the divider should be taken out as the output */
+				*line = s + strlen(DEFN_DIV[i]);
+				t = strndup(s, strlen(DEFN_DIV[i]));
+				fprintf(stderr, "parseExpr: \"%s\" and \"%s\" parsed\n", t, *line);
+				return t;
+			} else {
+				fprintf(stderr, "parseExpr: s != *line, parsing up to (but not including) \"%s\"\n", DEFN_DIV[i]);
+				t = *line;
+				*line = s;
+				s = strndup(t, n);
+				fprintf(stderr, "parseExpr: \"%s\" and \"%s\" parsed\n", s, *line);
+				return s;
+			}
+		}
 	}
-	fprintf(stderr, "parseExpr: output: \"%s\", p->_content: \"%s\"\n", output, *line);
-	return strdup(output);
+	/* input is not about definition */
+
+	/* detect LHS, RHS by " == ", etc. */
+
+
+	/* detect the main operation */
+		/* by counting total number of operations first? */
+	/* parse f, a, b, for f(a, b) */
+	return strdup("");
 }
 
 EXPR *addExpr(EXPR *p, char *_content)
