@@ -13,7 +13,7 @@ struct variable {
 
 typedef struct variable VAR;
 
-VAR *varAlloc(void)
+static VAR *varAlloc(void)
 {
 	return (VAR *) malloc(sizeof(VAR));
 }
@@ -43,7 +43,7 @@ VAR *addVar(VAR *p, char *name, double value)
 	return p;
 }
 
-void _listVar(VAR *p)
+static void _listVar(VAR *p)
 {
 	if (p != NULL) {
 		_listVar(p->left);

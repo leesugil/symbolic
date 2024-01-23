@@ -15,3 +15,7 @@ Symbolic calculator for arithmetic operations with fractions
 - Can parse equations of the form "F = G M m / r^2"
 - Can reduce equations.
 
+## Target Input Forms
+- x = 5, y = 6
+- f(x, y) = x^2 + y
+- f(x, y) == g(x, y, z)
