@@ -239,6 +239,7 @@ char *evalExpr(EXPR *p)
 	sprintf(output, "%s %s %s", left, op, right);
 	fprintf(stderr, "evalExpr: outcome = \"%s\"\n", output);
 
+	fprintf(stderr, "evalExpr: *** strdup used in the return, free it after use ***\n");
 	return strdup(output);
 }
 
