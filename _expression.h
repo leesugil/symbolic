@@ -122,11 +122,12 @@ EXPR *addExpr(EXPR *p, char *_content)
 			for (i = 0; i < tab; i++)
 				fprintf(stderr, " ");
 			fprintf(stderr, "(1) - parsing left\n");
-			left = parseExpr(&right);
+			left = parseExpr(&right);	/* this makes unary operations
+										 like '-' difficult to */
 			for (i = 0; i < tab; i++)
 				fprintf(stderr, " ");
 			fprintf(stderr, "(2) - parsing op\n");
-			p->op = parseExpr(&right);
+			p->op = parseExpr(&right);	/* be captured */
 			for (i = 0; i < tab; i++)
 				fprintf(stderr, " ");
 			fprintf(stderr, "(3) - parsing right\n");

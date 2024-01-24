@@ -1,3 +1,3 @@
-[submodule "stringe"]
-	path = stringe
-	url = https://github.com/leesugil/stringe.git
+[submodule "qol"]
+	path = qol
+	url = https://github.com/leesugil/qol.git
