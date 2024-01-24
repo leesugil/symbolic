@@ -5,6 +5,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <ctype.h>
+#include "qol/c/getword.h"
 
 #include "operation.h"
 
@@ -99,10 +100,6 @@ char *parseExpr(char **line)
 	char **DIV;
 	unsigned int DIV_N = DEFN_DIV_N + EQN_DIV_N + OP_DIV_N;
 
-	/* remove empty spaces? - don't.
-	while (isspace(**line))
-		(*line)++; */
-	
 	/* use of DIV */
 	DIV = getDIV();
 	for (i = 0; i < DIV_N; i++) {
@@ -131,39 +128,6 @@ char *parseExpr(char **line)
 		}
 	}
 
-
-	/* detect definition by " = ", ", " */
-	/* x = 1.2, y = -3.4e-5 */
-	/* f(x, y) = x^2 + y^2 */
-	/*for (i = 0; i < DEFN_DIV_N; i++) {
-		fprintf(stderr, "parseExpr: DEFN_DIV[%d] = \"%s\"\n", i, DEFN_DIV[i]);
-		if((s = strstr(*line, DEFN_DIV[i])) != NULL) {
-			fprintf(stderr, "parseExpr: DEFN_DIV[%d] = \"%s\" detected, s = \"%s\", *line = \"%s\"\n", i, DEFN_DIV[i], s, *line);
-			if ((n = s - *line) == 0) {
-				fprintf(stderr, "parseExpr: s == *line, parsing \"%s\"\n", DEFN_DIV[i]);
-				*line = s + strlen(DEFN_DIV[i]);
-				t = strndup(s, strlen(DEFN_DIV[i]));
-				fprintf(stderr, "parseExpr: \"%s\" and \"%s\" parsed\n", t, *line);
-				return t;
-			} else {
-				fprintf(stderr, "parseExpr: s != *line, parsing up to (but not including) \"%s\"\n", DEFN_DIV[i]);
-				t = *line;
-				*line = s;
-				s = strndup(t, n);
-				fprintf(stderr, "parseExpr: \"%s\" and \"%s\" parsed\n", s, *line);
-				return s;
-			}
-		}
-	}*/
-	/* input is not about definition */
-
-	/* detect LHS, RHS by " == ", etc. */
-
-
-	/* detect the main operation */
-		/* by counting total number of operations first? */
-	/* parse f, a, b, for f(a, b) */
-	/*return strdup("");*/
 	return NULL;
 }
 
@@ -222,6 +186,10 @@ EXPR *addExpr(EXPR *p, char *_content)
 	return p;
 }
 
+/* evalExpr: update p->content */
+	/* the display of the (binary) operator p->op will be checked here.
+	 * the string p->op will be compared to OP to determine its display form?
+	 * future work required here */
 char *evalExpr(EXPR *p)
 {
 	fprintf(stderr, "evalExpr: p->_content = \"%s\"\n", p->_content);
@@ -233,11 +201,15 @@ char *evalExpr(EXPR *p)
 	char *op;
 	char *right = NULL;
 	
-	if (p->left != NULL)
+	if (p->left != NULL) {
+		/*left = parenthword(p->left->content);*/
 		left = p->left->content;
+	}
 	op = p->op;
-	if (p->right != NULL)
+	if (p->right != NULL) {
+		/*right = parenthword(p->right->content);*/
 		right = p->right->content;
+	}
 	fprintf(stderr, "evalExpr: left, op, right = \"%s\", \"%s\", \"%s\" at \"%s\".\n", left, op, right, p->content);
 	int n = 0;
 	if (left != NULL)
@@ -245,8 +217,8 @@ char *evalExpr(EXPR *p)
 	n += strlen(op);
 	if (right != NULL)
 		n += strlen(left);
-	char output[n+4+1];
-	sprintf(output, "(%s %s %s)", left, op, right);
+	char output[n+2+1];
+	sprintf(output, "%s %s %s", left, op, right);
 	fprintf(stderr, "evalExpr: outcome = \"%s\"\n", output);
 
 	return strdup(output);
