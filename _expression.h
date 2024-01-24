@@ -24,17 +24,19 @@ static EXPR *exprAlloc(void)
 	return (EXPR *) malloc(sizeof(EXPR));
 }
 
-static char *OP_DIV[] = {
-	" + ",
-	" - ",
-	" * ",
-	" / ",
-	" % ",
-	" ",
-	"^",
-};
+/* for using with strpbrk */
+static char *BLOCK_START = {
+	"(",		/* parenthesis */
+	"[",		/* bracket */
+	"{"			/* curly brace */
+}
 
-static unsigned int OP_DIV_N = sizeof(OP_DIV) / sizeof(OP_DIV[0]);
+/* for using with strpbrk */
+static char *BLOCK_END = {
+	")",		/* parenthesis */
+	"]",		/* bracket */
+	"}"			/* curly brace */
+}
 
 static char *DEFN_DIV[] = {
 	", ",
@@ -52,6 +54,18 @@ static char *EQN_DIV[] = {
 };
 
 static unsigned int EQN_DIV_N = sizeof(EQN_DIV) / sizeof(EQN_DIV[0]);
+
+static char *OP_DIV[] = {
+	" + ",
+	" - ",
+	" * ",
+	" / ",
+	" % ",
+	" ",
+	"^",
+};
+
+static unsigned int OP_DIV_N = sizeof(OP_DIV) / sizeof(OP_DIV[0]);
 
 /* getDIV: all the dividers for parsing expr as a union */
 static char **getDIV(void)
@@ -102,6 +116,10 @@ char *parseExpr(char **line)
 
 	/* use of DIV */
 	DIV = getDIV();
+	/* "(a + b) * c"
+	 * !=
+	 * "(a", " + ", "b) * c"
+	 * find a way to mask the parenthesis when testing against strstr */
 	for (i = 0; i < DIV_N; i++) {
 		fprintf(stderr, "parseExpr: DIV[%d] = \"%s\"\n", i, DIV[i]);
 		if((s = strstr(*line, DIV[i])) != NULL) {
