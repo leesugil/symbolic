@@ -58,7 +58,7 @@ char *parseExpr(char **line)
 	int i, n;
 	char *s = NULL, *t = NULL;
 
-	/* remove empty spaces?
+	/* remove empty spaces? - don't.
 	while (isspace(**line))
 		(*line)++; */
 	
@@ -96,7 +96,8 @@ char *parseExpr(char **line)
 	/* detect the main operation */
 		/* by counting total number of operations first? */
 	/* parse f, a, b, for f(a, b) */
-	return strdup("");
+	/*return strdup("");*/
+	return NULL;
 }
 
 EXPR *addExpr(EXPR *p, char *_content)
@@ -110,6 +111,7 @@ EXPR *addExpr(EXPR *p, char *_content)
 		p->_content = strdup(_content);
 		if (strcmp(p->_content, "") == 0)
 			p->_content = NULL;
+		p->content = p->_content;
 		p->left = NULL;
 		p->right = NULL;
 		for (i = 0; i < tab; i++)
@@ -128,7 +130,8 @@ EXPR *addExpr(EXPR *p, char *_content)
 			for (i = 0; i < tab; i++)
 				fprintf(stderr, " ");
 			fprintf(stderr, "(3) - parsing right\n");
-			if (strcmp(p->op, "") != 0) {
+			/*if (strcmp(p->op, "") != 0) {*/
+			if (p->op != NULL) {
 				for (i = 0; i < tab; i++)
 					fprintf(stderr, " ");
 				fprintf(stderr, "(4) - creating p->left with left: \"%s\"\n", left);
@@ -153,7 +156,32 @@ EXPR *addExpr(EXPR *p, char *_content)
 
 char *evalExpr(EXPR *p)
 {
-	return p->_content;
+	fprintf(stderr, "evalExpr: p->_content = \"%s\"\n", p->_content);
+
+	if (p->op == NULL)
+		return p->_content;
+
+	char *left = NULL;
+	char *op;
+	char *right = NULL;
+	
+	if (p->left != NULL)
+		left = p->left->content;
+	op = p->op;
+	if (p->right != NULL)
+		right = p->right->content;
+	fprintf(stderr, "evalExpr: left, op, right = \"%s\", \"%s\", \"%s\" at \"%s\".\n", left, op, right, p->content);
+	int n = 0;
+	if (left != NULL)
+		n += strlen(left);
+	n += strlen(op);
+	if (right != NULL)
+		n += strlen(left);
+	char output[n+4+1];
+	sprintf(output, "(%s %s %s)", left, op, right);
+	fprintf(stderr, "evalExpr: outcome = \"%s\"\n", output);
+
+	return strdup(output);
 }
 
 void updateExpr(EXPR *p)
