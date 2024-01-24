@@ -51,29 +51,95 @@ static char *EQN_DIV[] = {
 
 static unsigned int EQN_DIV_N = sizeof(EQN_DIV) / sizeof(EQN_DIV[0]);
 
+/* getDIV: all the dividers for parsing expr as a union */
+static char **getDIV(void)
+{
+	unsigned int DIV_N = DEFN_DIV_N + EQN_DIV_N + OP_DIV_N;
+	char *tmp_union[DIV_N];
+	char **output = malloc(DIV_N * sizeof(char *));
+	int i, j = 0;
+
+	if (output == NULL) {
+		fprintf(stderr, "getDIV: malloc failure, returning NULL\n");
+		return NULL;
+	}
+
+	/* make temporary char *[] first */
+	for (i = 0; i < DEFN_DIV_N; i++, j++)
+		tmp_union[j] = DEFN_DIV[i];
+	for (i = 0; i < EQN_DIV_N; i++, j++)
+		tmp_union[j] = EQN_DIV[i];
+	for (i = 0; i < OP_DIV_N; i++, j++)
+		tmp_union[j] = OP_DIV[i];
+
+	/* dup to output */
+	for (i = 0; i < DIV_N; i++) {
+		output[i] = strdup(tmp_union[i]);
+		if (output[i] == NULL) {
+			for (j = 0; j < i; j++)
+				free(output[j]);
+			free(output);
+			fprintf(stderr, "getDIV: dup failure, returning NULL\n");
+			return NULL;
+		}
+		fprintf(stderr, "getDIV: output[%d] = \"%s\"\n", i, output[i]);
+	}
+
+	fprintf(stderr, "getDIV: returning valid char *output[n]\n");
+	return output;
+}
+
 /* parseExpr: divides mathematical expressions or statements and returns the first piece */
 char *parseExpr(char **line)
 {
 	fprintf(stderr, "parseExpr: parsing \"%s\"\n", *line);
 	int i, n;
 	char *s = NULL, *t = NULL;
+	char **DIV;
+	unsigned int DIV_N = DEFN_DIV_N + EQN_DIV_N + OP_DIV_N;
 
 	/* remove empty spaces? - don't.
 	while (isspace(**line))
 		(*line)++; */
 	
+	/* use of DIV */
+	DIV = getDIV();
+	for (i = 0; i < DIV_N; i++) {
+		fprintf(stderr, "parseExpr: DIV[%d] = \"%s\"\n", i, DIV[i]);
+		if((s = strstr(*line, DIV[i])) != NULL) {
+			/* DEFN_DIV[i] detected */
+			fprintf(stderr, "parseExpr: DIV[%d] = \"%s\" detected, s = \"%s\", *line = \"%s\"\n", i, DIV[i], s, *line);
+			/* get the first part */
+			if ((n = s - *line) == 0) {
+				fprintf(stderr, "parseExpr: s == *line, parsing \"%s\"\n", DIV[i]);
+				/* means the divider should be taken out as the output */
+				*line = s + strlen(DIV[i]);
+				t = strndup(s, strlen(DIV[i]));
+				fprintf(stderr, "parseExpr: \"%s\" and \"%s\" parsed\n", t, *line);
+				return t;
+			} else {
+				fprintf(stderr, "parseExpr: s != *line, parsing up to (but not including) \"%s\"\n", DIV[i]);
+				t = *line;
+				*line = s;
+				s = strndup(t, n);
+				fprintf(stderr, "parseExpr: \"%s\" and \"%s\" parsed\n", s, *line);
+				return s;
+			}
+		} else {
+			fprintf(stderr, "parseExpr: \"%s\" (DIV[%d]) not detected in \"%s\" (*line). (%d/%d)\n", DIV[i], i, *line, i, DIV_N - 1);
+		}
+	}
+
+
 	/* detect definition by " = ", ", " */
 	/* x = 1.2, y = -3.4e-5 */
 	/* f(x, y) = x^2 + y^2 */
-	for (i = 0; i < DEFN_DIV_N; i++) {
+	/*for (i = 0; i < DEFN_DIV_N; i++) {
 		fprintf(stderr, "parseExpr: DEFN_DIV[%d] = \"%s\"\n", i, DEFN_DIV[i]);
 		if((s = strstr(*line, DEFN_DIV[i])) != NULL) {
-			/* DEFN_DIV[i] detected */
 			fprintf(stderr, "parseExpr: DEFN_DIV[%d] = \"%s\" detected, s = \"%s\", *line = \"%s\"\n", i, DEFN_DIV[i], s, *line);
-			/* get the first part */
 			if ((n = s - *line) == 0) {
 				fprintf(stderr, "parseExpr: s == *line, parsing \"%s\"\n", DEFN_DIV[i]);
-				/* means the divider should be taken out as the output */
 				*line = s + strlen(DEFN_DIV[i]);
 				t = strndup(s, strlen(DEFN_DIV[i]));
 				fprintf(stderr, "parseExpr: \"%s\" and \"%s\" parsed\n", t, *line);
@@ -87,7 +153,7 @@ char *parseExpr(char **line)
 				return s;
 			}
 		}
-	}
+	}*/
 	/* input is not about definition */
 
 	/* detect LHS, RHS by " == ", etc. */

@@ -8,7 +8,7 @@
 #include <complex.h>
 
 #include "symbolic.h"
-#include "stringe/stringe.h"
+#include "qol/c/getword.h"
 
 #define MAXLINE 1000
 SYMB *getSymb(SYMB *, char *, double *);
