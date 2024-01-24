@@ -29,7 +29,8 @@ static char *OP_DIV[] = {
 	" * ",
 	" / ",
 	" % ",
-	" ^ "
+	" ",
+	"^",
 };
 
 static unsigned int OP_DIV_N = sizeof(OP_DIV) / sizeof(OP_DIV[0]);
