@@ -9,6 +9,90 @@
 
 #include "operation.h"
 
+/* Expression
+ * +-----------------------------------+
+ * | Divider(Expression1, Expression2) |
+ * +-----------------------------------+
+ *                       |
+ *                       |   +-------------+
+ *                       +---| Expression1 |
+ *                       |   +-------------+
+ *                       |   +---------+
+ *                       +---| Divider |
+ *                       |   +---------+
+ *                       |   +-------------+
+ *                       +---| Expression2 |
+ *                           +-------------+
+ */
+
+/* Expression
+ * +-----------------------------+
+ * | x = 1.2, y = -3.4e-5, z = 3 |
+ * +-----------------------------+
+ *          |
+ *          |   +---------+
+ *          +---| x = 1.2 |
+ *          |   +---------+
+ *          |       |    
+ *          |       |    +---+
+ *          |       +----| x |
+ *          |       |    +---+
+ *          |       |    +-----+
+ *          |       +----|  =  | Register/Update Symbol
+ *          |       |    +-----+
+ *          |       |    +-----+
+ *          |       +----| 1.2 |
+ *          |            +-----+
+ *          |   +----+
+ *          +---| ,  |
+ *          |   +----+
+ *          |   +--------------------+
+ *          +---| y = -3.4e-5, z = 3 |
+ *              +--------------------+
+ *                  |
+ *                  |
+ *                 ...
+ */
+
+/* Expression
+ * +---------------------------------+
+ * | f(x, y) = (x^2 + y^(1 - z)) * 3 |
+ * +---------------------------------+
+ *           |
+ *           |   +---------+
+ *           +---| f(x, y) |
+ *           |   +---------+
+ *           |        |
+ *           |        |   +---+
+ *           |        +---| x |
+ *           |        |   +---+
+ *           |        |   +-------+
+ *           |        +---| f(, ) |
+ *           |        |   +-------+
+ *           |        |   +---+
+ *           |        +---| y |
+ *           |            +---+
+ *           |   +-----+
+ *           +---|  =  | Register/Update Symbol
+ *           |   +-----+
+ *           |   +-----------------------+
+ *           +---| (x^2 + y^(1 - z)) * 3 |
+ *               +-----------------------+
+ *                                   |
+ *                                   |   +-------------------+
+ *                                   +---| (x^2 + y^(1 - z)) |
+ *                                   |   +-------------------+
+ *                                   |          |
+ *                                   |          |
+ *                                   |         ...
+ *                                   |   +-----+
+ *                                   +---|  *  |
+ *                                   |   +-----+
+ *                                   |   +---+
+ *                                   +---| 3 |
+ *                                       +---+
+ */
+
 struct expression {
 	char *_content;				/* original text used to create obj */
 	char *content;				/* to be updated after reduction */
@@ -25,18 +109,18 @@ static EXPR *exprAlloc(void)
 }
 
 /* for using with strpbrk */
-static char *BLOCK_START = {
+static char *BLOCK_START[] = {
 	"(",		/* parenthesis */
 	"[",		/* bracket */
 	"{"			/* curly brace */
-}
+};
 
 /* for using with strpbrk */
-static char *BLOCK_END = {
+static char *BLOCK_END[] = {
 	")",		/* parenthesis */
 	"]",		/* bracket */
 	"}"			/* curly brace */
-}
+};
 
 static char *DEFN_DIV[] = {
 	", ",
@@ -101,7 +185,7 @@ static char **getDIV(void)
 		fprintf(stderr, "getDIV: output[%d] = \"%s\"\n", i, output[i]);
 	}
 
-	fprintf(stderr, "getDIV: returning valid char *output[n]\n");
+	fprintf(stderr, "getDIV: returning valid char *output[n] (needs to be freed if not used)\n");
 	return output;
 }
 
@@ -109,7 +193,7 @@ static char **getDIV(void)
 char *parseExpr(char **line)
 {
 	fprintf(stderr, "parseExpr: parsing \"%s\"\n", *line);
-	int i, n;
+	int i, n, blocks = sizeof(BLOCK_START) / sizeof(char *);
 	char *s = NULL, *t = NULL;
 	char **DIV;
 	unsigned int DIV_N = DEFN_DIV_N + EQN_DIV_N + OP_DIV_N;
@@ -120,9 +204,13 @@ char *parseExpr(char **line)
 	 * !=
 	 * "(a", " + ", "b) * c"
 	 * find a way to mask the parenthesis when testing against strstr */
+	/* use strstrmaskblk from getword.h */
+	/* still incomplete.
+	 * first of all, ', ', ' == ' stuffs should be compared first before applying strstrmask.
+	 * second, strstrmask shouldn't be called if ( is at first or ) is at last?? */
 	for (i = 0; i < DIV_N; i++) {
 		fprintf(stderr, "parseExpr: DIV[%d] = \"%s\"\n", i, DIV[i]);
-		if((s = strstr(*line, DIV[i])) != NULL) {
+		if((s = strstrmaskblk(*line, DIV[i], BLOCK_START, BLOCK_END, blocks)) != NULL) {
 			/* DEFN_DIV[i] detected */
 			fprintf(stderr, "parseExpr: DIV[%d] = \"%s\" detected, s = \"%s\", *line = \"%s\"\n", i, DIV[i], s, *line);
 			/* get the first part */
@@ -131,6 +219,7 @@ char *parseExpr(char **line)
 				/* means the divider should be taken out as the output */
 				*line = s + strlen(DIV[i]);
 				t = strndup(s, strlen(DIV[i]));
+				free(DIV);
 				fprintf(stderr, "parseExpr: \"%s\" and \"%s\" parsed\n", t, *line);
 				return t;
 			} else {
@@ -138,6 +227,7 @@ char *parseExpr(char **line)
 				t = *line;
 				*line = s;
 				s = strndup(t, n);
+				free(DIV);
 				fprintf(stderr, "parseExpr: \"%s\" and \"%s\" parsed\n", s, *line);
 				return s;
 			}
@@ -145,6 +235,7 @@ char *parseExpr(char **line)
 			fprintf(stderr, "parseExpr: \"%s\" (DIV[%d]) not detected in \"%s\" (*line). (%d/%d)\n", DIV[i], i, *line, i, DIV_N - 1);
 		}
 	}
+	free(DIV);
 
 	return NULL;
 }
@@ -210,6 +301,8 @@ EXPR *addExpr(EXPR *p, char *_content)
 	 * future work required here */
 char *evalExpr(EXPR *p)
 {
+	/*free(p->content);*/
+
 	fprintf(stderr, "evalExpr: p->_content = \"%s\"\n", p->_content);
 
 	if (p->op == NULL)
@@ -239,7 +332,6 @@ char *evalExpr(EXPR *p)
 	sprintf(output, "%s %s %s", left, op, right);
 	fprintf(stderr, "evalExpr: outcome = \"%s\"\n", output);
 
-	fprintf(stderr, "evalExpr: *** strdup used in the return, free it after use ***\n");
 	return strdup(output);
 }
 
