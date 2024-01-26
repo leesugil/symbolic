@@ -50,6 +50,16 @@ void listSymb(Symb *p)
 		listSymb(p->right);
 	}
 }
+void testlistSymb(void)
+{
+	Symb *root = NULL;
+
+	root = addSymb(root, "x", "5");
+	root = addSymb(root, "y", "-1.2e-3");
+	root = addSymb(root, "f", "x + y");
+
+	listSymb(root);
+}
 
 /* getSymb: returns a pointer to the Symb found */
 Symb *getSymb(Symb *p, char *name)

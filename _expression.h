@@ -98,7 +98,7 @@ struct Expr {
 	char *op;
 	Expr *left;
 	Expr *right;
-}
+};
 
 static Expr *exprAlloc(void)
 {
@@ -125,34 +125,84 @@ Expr *addExpr(Expr *p, char *name)
 	return p;
 }
 
-static const char *const block_start[] = {
+static char *block_start[] = {
 	"(",
 	"[",
-	"{"
+	"{",
+	NULL
 };
 
-static const char *const block_end[] = {
+static char *block_end[] = {
 	")",
 	"]",
-	"}"
+	"}",
+	NULL
 };
 
+static char *operators[] = {
+	" + ",
+	" - ",
+	" * ",
+	" / ",
+	" % ",
+	"^",
+	NULL
+};
+
+/* parseExprOp: from a formula, parse the primary operator part */
 char *parseExprOp(char *line)
 {
 	/* (x + y) * z	-> strstrmaskblk will do.
 	 * x + (y + z) * z -> strstrmaskblk will do.
-	 * (x + y) * (x + z)	-> strstrmaskblk will fail.
-	 * (x + y * z)	-> strstrmaskblk will fail.
+	 * (x + y) * (x + z)	-> strstrmaskblk will do.
+	 * (x + y * z)	-> strstrmaskblk will handle it!.
 	 * */
 	/* strstrmasblk now works properly! */
+	char *prog = "parseExprOp";
+	char *p, *q = NULL;
+	int i, j = 0, k;
+
+	if (line == NULL)
+		return NULL;
+	
+	for (i = 0; operators[i] != NULL; i++) {
+		fprintf(stderr, "%s: searching \"%s\" in \"%s\"...\n", prog, operators[i], line);
+		p = strstrmaskblk(line, operators[i], block_start, block_end);
+		fprintf(stderr, "%s: found \"%s\"\n", prog, p);
+		if (p != NULL && (q == NULL || p < q)) {
+			q = p;
+			j = i;
+		}
+		fprintf(stderr, "%s: best candidate so far: \"%s\"\n", prog, q);
+	}
+
+	if (q != NULL) {
+		k = strlen(q) - strlen(operators[j]);
+		q = bcutnstr(q, k);
+
+		return q;
+	} else
+		return NULL;
+}
+void testparseExprOp(void)
+{
+	char *line = "(((x + y) * y) + (y + z))";
+	char *output = parseExprOp(line);
+
+	printf("input: \"%s\"\n", line);
+	printf("testparseExprOp: \"%s\"\n", output);
+
+	free(output);
 }
 
 char *parseExprLeft(char *line)
 {
+	return NULL;
 }
 
 char *parseExprRight(char *line)
 {
+	return NULL;
 }
 
 /* listExpr: in-order print of tree p */
