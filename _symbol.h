@@ -4,13 +4,13 @@
 #include <string.h>
 #include <stdlib.h>
 
-#define MAXLEN 1000
+static const unsigned int maxlen = 1000;
 
 typedef struct Symb Symb;
 
 struct Symb {
 	char *name;
-	char formula[MAXLEN];	/* mutable so that it can be updated */
+	char formula[maxlen+1];	/* mutable so that it can be updated */
 	Symb *left;
 	Symb *right;
 };
@@ -27,12 +27,12 @@ Symb *addSymb(Symb *p, char *name, char *formula)
 	if (p == NULL) {
 		p = symbAlloc();
 		p->name = strdup(name);
-		p->formula[MAXLEN-1] = '\0';
-		strncpy(p->formula, formula, MAXLEN-1);
+		p->formula[maxlen] = '\0';
+		strncpy(p->formula, formula, maxlen);
 		p->left = NULL;
 		p->right = NULL;
 	} else if ((cond = strcmp(name, p->name)) == 0)
-		strncpy(p->formula, formula, MAXLEN-1);
+		strncpy(p->formula, formula, maxlen);
 	else if (cond < 0)
 		p->left = addSymb(p->left, name, formula);
 	else
