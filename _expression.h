@@ -106,8 +106,8 @@ static Expr *exprAlloc(void)
 }
 
 void parseExprOp(char [], char []);
-char *parseExprLeft(char *);
-char *parseExprRight(char *);
+void parseExprLeft(char [], char *);
+void parseExprRight(char [], char *);
 
 Expr *addExpr(Expr *p, char *name)
 {
@@ -118,8 +118,11 @@ Expr *addExpr(Expr *p, char *name)
 		parseExprOp(p->op, p->name);
 		p->left = NULL;
 		p->right = NULL;
-		p->left = addExpr(p->left, parseExprLeft(p->name));
-		p->right = addExpr(p->right, parseExprRight(p->name));
+		char dum_line[MAXCHAR] = "";
+		parseExprLeft(dum_line, p->name);
+		p->left = addExpr(p->left, dum_line);
+		parseExprRight(dum_line, p->name);
+		p->right = addExpr(p->right, dum_line);
 	}
 
 	return p;
@@ -209,14 +212,50 @@ void testparseExprOp(void)
 	printf("testparseExprOp: line4, \"%s\"\n\n", op);
 }
 
-char *parseExprLeft(char *line)
+static char *comparisons[] = {
+	" == ",
+	" > ",
+	" >= ",
+	" < ",
+	" <= ",
+	" != ",
+	NULL
+};
+
+void parseExprLeft(char w[], char *line)
 {
-	return NULL;
+	/* do strstrblk with ==, <, >, etc., get n, and do bcutnstr */
+	char *prog = "parseExprLeft";
+	unsigned int index = 0;
+	char *p = strstrblk(line, comparisons, &index);
+	if (p == NULL)
+		fprintf(stderr, "%s: there is no LHS to parse\n", prog);
+	else {
+		int n = strlen(line) - (p - line);
+		strcpy(w, line);
+		bcutnstr(w, n);
+	}
+}
+void testparseexprleft(void)
+{
+	char *line1 = "this is a test LHS = this is a test RHS";
+	char w[MAXCHAR] = "";
+
+	printf("input: \"%s\"\n", line1);
+	parseExprLeft(w, line1);
+	printf("testparseexprleft: \"%s\"\n", w);
+
+	char *line2 = "this is a test LHS >= this is a test RHS";
+	w[0] = '\0';
+
+	printf("input: \"%s\"\n", line2);
+	parseExprLeft(w, line2);
+	printf("testparseexprleft: \"%s\"\n", w);
 }
 
-char *parseExprRight(char *line)
+void parseExprRight(char w[], char *line)
 {
-	return NULL;
+	/* do strstr with " = " */
 }
 
 /* listExpr: in-order print of tree p */
