@@ -255,7 +255,33 @@ void testparseexprleft(void)
 
 void parseExprRight(char w[], char *line)
 {
-	/* do strstr with " = " */
+	/* do strstrblk with " = ", get n, do fcutnstr */
+	char *prog = "parseExprRight";
+	unsigned int index = 0;
+	char *p = strstrblk(line, comparisons, &index);
+	if (p == NULL)
+		fprintf(stderr, "%s: there is no RHS to parse\n", prog);
+	else {
+		int n = strlen(line) - (p - line);
+		strcpy(w, line);
+		fcutnstr(w, n);
+	}
+}
+void testparseexprright(void)
+{
+	char *line1 = "this is a test LHS = this is a test RHS";
+	char w[MAXCHAR] = "";
+
+	printf("input: \"%s\"\n", line1);
+	parseExprRight(w, line1);
+	printf("testparseexprright: \"%s\"\n", w);
+
+	char *line2 = "this is a test LHS >= this is a test RHS";
+	w[0] = '\0';
+
+	printf("input: \"%s\"\n", line2);
+	parseExprRight(w, line2);
+	printf("testparseexprright: \"%s\"\n", w);
 }
 
 /* listExpr: in-order print of tree p */
