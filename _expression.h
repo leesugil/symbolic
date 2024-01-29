@@ -166,6 +166,7 @@ void parseExprOp(char op[], char line[])
 		fprintf(stderr, "%s: searching \"%s\" in \"%s\"...\n", prog, operators[i], line);
 		p = strstrmaskblk(line, operators[i], block_start, block_end);
 		if (p != NULL && (q == NULL || p < q)) {
+			/* record the best result in q */
 			q = p;
 			j = i;
 		}
@@ -174,9 +175,9 @@ void parseExprOp(char op[], char line[])
 
 	/* q is the best candidate containing operators[j] in front */
 	if (q != NULL) {
-		k = strlen(q) - strlen(operators[j]);
 		fprintf(stderr, "%s: retrieving the first %lu characters from the best candidate...\n", prog, strlen(operators[j]));
 		strcpy(op, q);
+		k = strlen(q) - strlen(operators[j]);
 		bcutnstr(op, k);
 	}
 }
@@ -185,17 +186,27 @@ void testparseExprOp(void)
 	char line1[MAXCHAR] = "(((x + y) * y)^(y + z))";
 	char line2[MAXCHAR] = "(((x + y) * y) + (y + z))";
 	char line3[MAXCHAR] = "(((x + y) * y) % (y + z))";
+	char line4[MAXCHAR] = "((((x + y) * y) % (y + z))";
 	char op[MAXCHAR] = "";
 
 	printf("input: \"%s\"\n", line1);
 	parseExprOp(op, line1);
-	printf("testparseExprOp: \"%s\"\n", op);
+	printf("testparseExprOp: line1, \"%s\"\n\n", op);
+
 	printf("input: \"%s\"\n", line2);
+	op[0] = '\0';
 	parseExprOp(op, line2);
-	printf("testparseExprOp: \"%s\"\n", op);
+	printf("testparseExprOp: line2, \"%s\"\n\n", op);
+
 	printf("input: \"%s\"\n", line3);
+	op[0] = '\0';
 	parseExprOp(op, line3);
-	printf("testparseExprOp: \"%s\"\n", op);
+	printf("testparseExprOp: line3, \"%s\"\n\n", op);
+
+	printf("input: \"%s\"\n", line4);
+	op[0] = '\0';
+	parseExprOp(op, line4);
+	printf("testparseExprOp: line4, \"%s\"\n\n", op);
 }
 
 char *parseExprLeft(char *line)
@@ -211,10 +222,15 @@ char *parseExprRight(char *line)
 /* listExpr: in-order print of tree p */
 void listExpr(Expr *p)
 {
+	static int tabs = 0;
+
 	if (p != NULL) {
+		printn("\t", tabs);
 		printf("%s\n", p->name);
+		tabs++;
 		listExpr(p->left);
 		listExpr(p->right);
+		tabs--;
 	}
 }
 
