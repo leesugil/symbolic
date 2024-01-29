@@ -94,8 +94,8 @@
 typedef struct Expr Expr;
 
 struct Expr {
-	char *name;
-	char *op;
+	char name[MAXCHAR];
+	char op[MAXCHAR];
 	Expr *left;
 	Expr *right;
 };
@@ -105,7 +105,7 @@ static Expr *exprAlloc(void)
 	return (Expr *) malloc(sizeof(Expr));
 }
 
-char *parseExprOp(char *);
+void parseExprOp(char [], char []);
 char *parseExprLeft(char *);
 char *parseExprRight(char *);
 
@@ -114,8 +114,8 @@ Expr *addExpr(Expr *p, char *name)
 
 	if (p == NULL) {
 		p = exprAlloc();
-		p->name = strdup(name);
-		p->op = parseExprOp(p->name);
+		strcpy(p->name, name);
+		parseExprOp(p->op, p->name);
 		p->left = NULL;
 		p->right = NULL;
 		p->left = addExpr(p->left, parseExprLeft(p->name));
@@ -150,25 +150,21 @@ static char *operators[] = {
 };
 
 /* parseExprOp: from a formula, parse the primary operator part */
-char *parseExprOp(char *line)
+void parseExprOp(char op[], char line[])
 {
 	/* (x + y) * z	-> strstrmaskblk will do.
 	 * x + (y + z) * z -> strstrmaskblk will do.
 	 * (x + y) * (x + z)	-> strstrmaskblk will do.
 	 * (x + y * z)	-> strstrmaskblk will handle it!.
 	 * */
-	/* strstrmasblk now works properly! */
+	/* strstrmaskblk now works properly! */
 	char *prog = "parseExprOp";
 	char *p, *q = NULL;
 	int i, j = 0, k;
 
-	if (line == NULL)
-		return NULL;
-	
 	for (i = 0; operators[i] != NULL; i++) {
 		fprintf(stderr, "%s: searching \"%s\" in \"%s\"...\n", prog, operators[i], line);
 		p = strstrmaskblk(line, operators[i], block_start, block_end);
-		fprintf(stderr, "%s: found \"%s\"\n", prog, p);
 		if (p != NULL && (q == NULL || p < q)) {
 			q = p;
 			j = i;
@@ -176,23 +172,30 @@ char *parseExprOp(char *line)
 		fprintf(stderr, "%s: best candidate so far: \"%s\"\n", prog, q);
 	}
 
+	/* q is the best candidate containing operators[j] in front */
 	if (q != NULL) {
 		k = strlen(q) - strlen(operators[j]);
-		q = bcutnstr(q, k);
-
-		return q;
-	} else
-		return NULL;
+		fprintf(stderr, "%s: retrieving the first %lu characters from the best candidate...\n", prog, strlen(operators[j]));
+		strcpy(op, q);
+		bcutnstr(op, k);
+	}
 }
 void testparseExprOp(void)
 {
-	char *line = "(((x + y) * y) + (y + z))";
-	char *output = parseExprOp(line);
+	char line1[MAXCHAR] = "(((x + y) * y)^(y + z))";
+	char line2[MAXCHAR] = "(((x + y) * y) + (y + z))";
+	char line3[MAXCHAR] = "(((x + y) * y) % (y + z))";
+	char op[MAXCHAR] = "";
 
-	printf("input: \"%s\"\n", line);
-	printf("testparseExprOp: \"%s\"\n", output);
-
-	free(output);
+	printf("input: \"%s\"\n", line1);
+	parseExprOp(op, line1);
+	printf("testparseExprOp: \"%s\"\n", op);
+	printf("input: \"%s\"\n", line2);
+	parseExprOp(op, line2);
+	printf("testparseExprOp: \"%s\"\n", op);
+	printf("input: \"%s\"\n", line3);
+	parseExprOp(op, line3);
+	printf("testparseExprOp: \"%s\"\n", op);
 }
 
 char *parseExprLeft(char *line)
@@ -221,8 +224,8 @@ void removeExpr(Expr *p)
 	if (p != NULL) {
 		removeExpr(p->left);
 		removeExpr(p->right);
-		free(p->name);
-		free(p->op);
+		//free(p->name);	no longer dynamically allocated
+		//free(p->op);		no longer dynamically allocated
 		free(p);
 	}
 }
@@ -235,6 +238,5 @@ void removeExprBranch(Expr *p)
 	p->left = NULL;
 	p->right = NULL;
 }
-
 
 #endif	/* _EXPRESSION_H */
