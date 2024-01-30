@@ -10,7 +10,7 @@ typedef struct Symb Symb;
 
 struct Symb {
 	char *name;
-	char formula[MAXCHAR+1];	/* mutable so that it can be updated */
+	char formula[MAXCHAR+1];
 	Symb *left;
 	Symb *right;
 };
@@ -27,7 +27,7 @@ Symb *addSymb(Symb *p, char *name, char *formula)
 	if (p == NULL) {
 		p = symbAlloc();
 		p->name = strdup(name);
-		p->formula[MAXCHAR] = '\0';
+		//p->formula[MAXCHAR] = '\0';
 		strncpy(p->formula, formula, MAXCHAR);
 		p->left = NULL;
 		p->right = NULL;
@@ -46,7 +46,7 @@ void listSymb(Symb *p)
 {
 	if (p != NULL) {
 		listSymb(p->left);
-		printf("%s = %s\n", p->name, p->formula);
+		printf("\"%s\" = \"%s\"\n", p->name, p->formula);
 		listSymb(p->right);
 	}
 }
@@ -81,7 +81,31 @@ Symb *getSymb(Symb *p, char *name)
 	}
 }
 
+/* resetSymb: resets fomula for a variable to null */
+Symb *resetSymb(Symb *p)
+{
+	if (p == NULL)
+		return NULL;
+
+	p->formula[0] = '\0';
+	return p;
+}
+void testresetSymb(void)
+{
+	Symb *p = NULL;
+	char *name = "x";
+	char *formula = "3.14";
+
+	p = addSymb(p, name, formula);
+	listSymb(p);
+	
+	Symb *q = getSymb(p, name);
+	q = resetSymb(q);
+	listSymb(p);
+}
+
 /* removeSymb: frees a node and its branch below */
+/* see also: resetSymb */
 void _removeSymb(Symb *p)
 {
 	if (p != NULL) {
@@ -98,6 +122,5 @@ void removeSymb(Symb **p)
 	_removeSymb(*p);
 	*p = NULL;
 }
-
 
 #endif	/* _SYMBOL_H */

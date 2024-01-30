@@ -162,6 +162,8 @@ Expr *addExpr(Expr *p, char *name)
 	if (p == NULL) {
 		p = exprAlloc();
 		strcpy(p->name, name);
+		if (p->name[strlen(p->name)-1] == '\n')
+			p->name[strlen(p->name)-1] = '\0';
 		p->left = NULL;
 		p->right = NULL;
 
@@ -174,12 +176,14 @@ Expr *addExpr(Expr *p, char *name)
 }
 
 /* parseExpr: capsulates remove_outer_block, parseExprOp, parseExprLeft, parseExprRight */
+/* input " = " causes error, keep capturing p->left == " = " causing infinite loop */
 Expr *parseExpr(Expr *p)
 {
 	if (p == NULL)
 		return NULL;
 
 	char *prog = "parseExpr";
+	fprintf(stdout, "%s: parsing \"%s\"\n", prog, p->name);
 
 	unsigned int index = 0;
 	while (is_outer_blocked_blk(p->name, block_start, block_end, &index))
@@ -191,7 +195,7 @@ Expr *parseExpr(Expr *p)
 	/* if not, start parsing operations */
 	if (strcmp(p->name, "") != 0) {
 		char dum_line[MAXCHAR] = "";
-		/* check dividers */
+		/* check dividers ", " */
 		fprintf(stderr, "(1) p->name:\"%s\"\n", p->name);
 		parseExprLeftBy(dum_line, p->name, dividers, NULL, NULL);
 		fprintf(stderr, "(2)\n");
@@ -213,27 +217,30 @@ Expr *parseExpr(Expr *p)
 			}
 		} else {
 			/* no dividers */
-			/* check definitions */
+			/* check definitions " = " */
+			/* "x = " or " = " */
 			fprintf(stderr, "(8) no \", \"-like dividers found in \"%s\"\n", p->name);
 			parseExprLeftBy(dum_line, p->name, definitions, NULL, NULL);
 			fprintf(stderr, "(9)\n");
 			if (dum_line[0] != '\0') {
 				/* f = (x + y) */
-				fprintf(stderr, "(10) \" = \"-like divider found in \"%s\"\n", p->name);
-				fprintf(stderr, "(10) p->left->name:\"%s\"\n", dum_line);
+				fprintf(stdout, "%s: (10) \" = \"-like divider found in \"%s\"\n", prog, p->name);
+				fprintf(stdout, "%s: (10) p->left->name:\"%s\"\n", prog, dum_line);
 				p->left = addExpr(p->left, dum_line);
-				fprintf(stderr, "(11) back to p->name:\"%s\"\n", p->name);
+				fprintf(stdout, "%s: (11) back to p->name:\"%s\"\n", prog, p->name);
 				parseExprOpBy(p->op, p->name, definitions, NULL, NULL);
-				fprintf(stderr, "(12) p->op:\"%s\"\n", p->op);
+				fprintf(stdout, "%s: (12) p->op:\"%s\"\n", prog, p->op);
 				parseExprRightBy(dum_line, p->name, definitions, NULL, NULL);
+				/* for "x = " or " = ", dum_line == "" */
+				fprintf(stdout, "%s: (12.1) p->right candidate:\"%s\"\n", prog, dum_line);
 				if (dum_line[0] != '\0') {
-					fprintf(stderr, "(13) p->right->name:\"%s\"\n", dum_line);
+					fprintf(stdout, "%s: (13) p->right->name:\"%s\"\n", prog, dum_line);
 					p->right = addExpr(p->right, dum_line);
-					fprintf(stderr, "(14) back to p->name:\"%s\"\n", p->name);
+					fprintf(stdout, "%s: (14) back to p->name:\"%s\"\n", prog, p->name);
 				}
 			} else {
 				/* no definition statements */
-				/* check LHS, RHS */
+				/* check LHS, RHS, " == " */
 				fprintf(stderr, "(15) no \" = \"-like divider found in \"%s\"\n", p->name);
 				parseExprLeftBy(dum_line, p->name, comparisons, NULL, NULL);
 				fprintf(stderr, "(16)\n");
@@ -345,24 +352,28 @@ void testparseExprOpBy(void)
 }
 
 /* parseExprLeftBy: whether the condition given by the " = "-type or the " == "-type, the function parses the relevant LHS part */
-void parseExprLeftBy(char w[], char *line, char **bulk, char **block_start, char **block_end)
+void parseExprLeftBy(char w[], char *line, char **bulk, char **b_start, char **b_end)
 {
 	/* do strstrblk with ==, <, >, etc., get n, and do bcutnstr */
 	char *prog = "parseExprLeft";
 	unsigned int index = 0;
 	char *p = NULL;
+
+	fprintf(stderr, "%s: parse subject:\"%s\"\n", prog, line);
 	
 	/* index updated is for bulk */
-	p = strstrblkmaskblk(line, bulk, &index, block_start, block_end);
+	p = strstrblkmaskblk(line, bulk, &index, b_start, b_end);
 
 	if (p == NULL) {
 		fprintf(stderr, "%s: there is no LHS to parse\n", prog);
 		w[0] = '\0';
 	}
 	else {
-		int n = strlen(line) - (p - line);
+		int n = strlen(p);
+		fprintf(stderr, "%s: p:\"%s\", n:%d\n", prog, p, n);
 		strcpy(w, line);
 		bcutnstr(w, n);
+		fprintf(stderr, "%s: parsed:\"%s\"\n", prog, w);
 	}
 }
 void testparseExprLeftBy(void)
@@ -382,27 +393,30 @@ void testparseExprLeftBy(void)
 	printf("testparseexprleft: \"%s\"\n", w);
 }
 
-void parseExprRightBy(char w[], char *line, char **bulk, char **block_start, char **block_end)
+void parseExprRightBy(char w[], char *line, char **bulk, char **b_start, char **b_end)
 {
 	/* do strstrblk with " = ", get n, do fcutnstr */
 	char *prog = "parseExprRight";
 	unsigned int index = 0;
 	char *p = NULL;
 
+	fprintf(stdout, "%s: parse subject:\"%s\"\n", prog, line);
+
 	/* index updated is for bulk */
-	p = strstrblkmaskblk(line, bulk, &index, block_start, block_end);
+	p = strstrblkmaskblk(line, bulk, &index, b_start, b_end);
+	/* when line = " = ", this gave p == NULL */
 
 	if (p == NULL) {
-		fprintf(stderr, "%s: there is no RHS to parse\n", prog);
+		fprintf(stdout, "%s: there is no RHS to parse\n", prog);
 		w[0] = '\0';
 	}
 	else {
-		fprintf(stderr, "%s: RHS before removing the operator part:\"%s\"\n", prog, p);
+		fprintf(stdout, "%s: RHS before removing the operator part:\"%s\"\n", prog, p);
 		int n = strlen(bulk[index]);
-		fprintf(stderr, "%s: deleting the first %d characters\n", prog, n);
+		fprintf(stdout, "%s: deleting the first %d characters\n", prog, n);
 		strcpy(w, p);
 		fcutnstr(w, n);
-		fprintf(stderr, "%s: output:\"%s\"\n", prog, w);
+		fprintf(stdout, "%s: output:\"%s\"\n", prog, w);
 	}
 }
 void testparseExprRightBy(void)
@@ -482,7 +496,14 @@ Expr *evalExpr(Expr *p)
 	strcat(p->name, p->op);
 	if (p->right != NULL)
 		strcat(p->name, p->right->name);
-	if (strcmp(p->op, "") != 0)
+	if ((strcmp(p->op, "")
+			* strcmp(p->op, ", ")
+			* strcmp(p->op, " = ")
+			* strcmp(p->op, " == ")
+			* strcmp(p->op, " >= ")
+			* strcmp(p->op, " > ")
+			* strcmp(p->op, " <= ")
+			* strcmp(p->op, " < ")) != 0)
 		parenthstr(p->name);
 
 	return p;

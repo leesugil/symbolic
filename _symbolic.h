@@ -16,6 +16,9 @@
  * add/update a Symb node */
 Symb *updateSymb(Symb *p, Expr *q)
 {
+	char *prog = "updateSymb";
+	fprintf(stdout, "%s: expr->name:\"%s\"\n", prog, q->name);
+
 	if (q == NULL)
 		return p;
 
@@ -24,7 +27,15 @@ Symb *updateSymb(Symb *p, Expr *q)
 
 	if (strcmp(q->op, " = ") == 0) {
 		/* add/update symbol */
-		p = addSymb(p, q->left->name, q->right->name);
+		fprintf(stdout, "%s: add/update a symbol with \"%s\" = \"%s\"\n", prog, q->left->name, q->right->name);
+		if (q->right == NULL) {
+			/* this is a special case like expr "x = " having a NULL q->right */
+			/* we send an empty string "" to addSymb */
+			/* need to track how is this going to affect sybstitution */
+			/* so far, p->formula == "" is not counted toward substitution in updateExpr */
+			p = addSymb(p, q->left->name, "");
+		} else
+			p = addSymb(p, q->left->name, q->right->name);
 	}
 
 	return p;
@@ -70,13 +81,21 @@ void testupdateSymb(void)
 
 Expr *updateExpr(Expr *p, Symb *root)
 {
+	char *prog = "updateExpr";
+
 	if (p == NULL)
 		return NULL;
 
+	fprintf(stderr, "%s:\n", prog);
+
 	Symb *q = NULL;
 	if ((q = getSymb(root, p->name)) != NULL) {
-		strcpy(p->name, q->formula);
-		p = parseExpr(p);
+		fprintf(stderr, "%s: q->name:\"%s\"\n", prog, q->name);
+		if (strcmp(q->formula, "") != 0) {
+		//if (strlen(q->formula) > 0) {
+			strcpy(p->name, q->formula);
+			p = parseExpr(p);
+		}
 	}
 
 	updateExpr(p->left, root);
