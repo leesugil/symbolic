@@ -416,14 +416,20 @@ void listExpr(Expr *p)
 	static int tabs = 0;
 
 	if (p != NULL) {
-		printn("\t", tabs);
+		printn("\t", tabs-1);
+		if (tabs > 0)
+			printf("\t\b\b\b|  ");
+		printf("\n");
+		printn("\t", tabs-1);
+		if (tabs > 0)
+			printf("\t\b\b\b+- ");
 		printf("%s\n", p->name);
 		tabs++;
 		listExpr(p->left);
-		if (strlen(p->op) > 0) {
-			printn("\t", tabs);
-			displayExprOp(p);
-		}
+		//if (strlen(p->op) > 0) {
+		//	printn("\t", tabs);
+		//	displayExprOp(p);
+		//}
 		listExpr(p->right);
 		tabs--;
 	}
