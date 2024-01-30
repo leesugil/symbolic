@@ -435,25 +435,26 @@ void listExpr(Expr *p)
 	}
 }
 
-/* removeExpr: frees a expr and its branch below */
-void removeExpr(Expr *p)
+/* _removeExpr: used in removeExpr */
+void _removeExpr(Expr *p)
 {
 	if (p != NULL) {
-		removeExpr(p->left);
-		removeExpr(p->right);
+		_removeExpr(p->left);
+		p->left = NULL;
+		_removeExpr(p->right);
+		p->right = NULL;
 		//free(p->name);	no longer dynamically allocated
 		//free(p->op);		no longer dynamically allocated
+		strcpy(p->name, "deleted");
 		free(p);
 	}
 }
 
-/* removeExprBranch: frees child exprs in the branch */
-void removeExprBranch(Expr *p)
+/* removeExpr: frees a expr and its branch below */
+void removeExpr(Expr **p)
 {
-	removeExpr(p->left);
-	removeExpr(p->right);
-	p->left = NULL;
-	p->right = NULL;
+	_removeExpr(*p);
+	*p = NULL;
 }
 
 #endif	/* _EXPRESSION_H */
