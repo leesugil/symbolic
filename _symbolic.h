@@ -108,4 +108,32 @@ void testupdateExpr(void)
 	listExpr(p);
 }
 
+void testevalExpr2(void)
+{
+	Symb *root = NULL;
+	Expr *p = NULL;
+
+	char *line = NULL;
+	line = "x = 5, y = 6, f = (x + y), g = f / z";
+	p = addExpr(p, line);
+	printf("symbol registration\n");
+	listExpr(p);
+	root = updateSymb(root, p);
+	printf("\nsymbol tree\n");
+	listSymb(root);
+	
+	removeExpr(&p);
+	line = "x * (f * z)^g";
+	p = addExpr(p, line);
+	printf("\nmath expression (before)\n");
+	listExpr(p);
+	p = updateExpr(p, root);
+	printf("\nmath expression (after)\n");
+	listExpr(p);
+
+	p = evalExpr(p);
+	printf("\nevaluated math expression (after)\n");
+	listExpr(p);
+}
+
 #endif	/* _SYMBOLIC_H */

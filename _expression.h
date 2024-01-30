@@ -461,11 +461,42 @@ void _removeExpr(Expr *p)
 	}
 }
 
-/* removeExpr: frees a expr and its branch below */
+/* removeExpr: frees an expr and its branch below */
 void removeExpr(Expr **p)
 {
 	_removeExpr(*p);
 	*p = NULL;
+}
+
+/* evalExpr: evaluates an expr */
+Expr *evalExpr(Expr *p)
+{
+	if (p == NULL)
+		return NULL;
+	
+	p->left = evalExpr(p->left);
+	p->right = evalExpr(p->right);
+
+	if (p->left != NULL)
+		strcpy(p->name, p->left->name);
+	strcat(p->name, p->op);
+	if (p->right != NULL)
+		strcat(p->name, p->right->name);
+	if (strcmp(p->op, "") != 0)
+		parenthstr(p->name);
+
+	return p;
+}
+void testevalExpr(void)
+{
+	char line[MAXCHAR] = "(x + ((x + y) + (y + z)))";
+	Expr *p = NULL;
+	p = addExpr(p, line);
+	printf("\nevalExpr (before)\n");
+	listExpr(p);
+	p = evalExpr(p);
+	printf("\nevalExpr (after)\n");
+	listExpr(p);
 }
 
 #endif	/* _EXPRESSION_H */
