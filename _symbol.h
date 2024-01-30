@@ -4,13 +4,13 @@
 #include <string.h>
 #include <stdlib.h>
 
-static const unsigned int maxlen = 1000;
+#include "qol/c/getword.h"
 
 typedef struct Symb Symb;
 
 struct Symb {
 	char *name;
-	char formula[maxlen+1];	/* mutable so that it can be updated */
+	char formula[MAXCHAR+1];	/* mutable so that it can be updated */
 	Symb *left;
 	Symb *right;
 };
@@ -27,12 +27,12 @@ Symb *addSymb(Symb *p, char *name, char *formula)
 	if (p == NULL) {
 		p = symbAlloc();
 		p->name = strdup(name);
-		p->formula[maxlen] = '\0';
-		strncpy(p->formula, formula, maxlen);
+		p->formula[MAXCHAR] = '\0';
+		strncpy(p->formula, formula, MAXCHAR);
 		p->left = NULL;
 		p->right = NULL;
 	} else if ((cond = strcmp(name, p->name)) == 0)
-		strncpy(p->formula, formula, maxlen);
+		strncpy(p->formula, formula, MAXCHAR);
 	else if (cond < 0)
 		p->left = addSymb(p->left, name, formula);
 	else
@@ -82,22 +82,21 @@ Symb *getSymb(Symb *p, char *name)
 }
 
 /* removeSymb: frees a node and its branch below */
-void removeSymb(Symb *p)
+void _removeSymb(Symb *p)
 {
 	if (p != NULL) {
-		removeSymb(p->left);
-		removeSymb(p->right);
+		_removeSymb(p->left);
+		_removeSymb(p->right);
+		p->left = NULL;
+		p->right = NULL;
 		free(p);
 	}
 }
 
-/* removeSymbBranch: frees child nodes in the branch */
-void removeSymbBranch(Symb *p)
+void removeSymb(Symb **p)
 {
-	removeSymb(p->left);
-	removeSymb(p->right);
-	p->left = NULL;
-	p->right = NULL;
+	_removeSymb(*p);
+	*p = NULL;
 }
 
 

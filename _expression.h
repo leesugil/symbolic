@@ -416,14 +416,7 @@ void listExpr(Expr *p)
 	static int tabs = 0;
 
 	if (p != NULL) {
-		if (tabs > 0) {
-			printf("\n");
-			printn("\t", tabs-1);
-			printf("\t\b\b\b\b|   ");
-			printf("\n");
-			printn("\t", tabs-1);
-			printf("\t\b\b\b\b+-  ");
-		}
+		printn("\t", tabs);
 		printf("%s\n", p->name);
 		tabs++;
 		listExpr(p->left);
