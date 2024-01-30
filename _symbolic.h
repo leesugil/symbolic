@@ -29,6 +29,19 @@ Symb *updateSymb(Symb *p, Expr *q)
 
 	return p;
 }
+void testupdateSymb(void)
+{
+	Symb *p = NULL;
+	Expr *q = NULL;
+
+	char *line = NULL;
+	line = "x = 5, y = 6, f = (x + y)";
+	q = addExpr(q, line);
+	listExpr(q);
+	listSymb(p);
+	p = updateSymb(p, q);
+	listSymb(p);
+}
 
 /* now, updating linked symbols could be tricky.
  * if f = f(g) where g = g(h) where h = h(x, y), x = ..., for example,
@@ -54,15 +67,45 @@ Symb *updateSymb(Symb *p, Expr *q)
  * parseExpr must follow,
  * and then keep proceeding to the updated q->left, q->right */
 /* parseExpr added */
-int is_updated_needed(Expr *p, Symb *root)
+
+Expr *updateExpr(Expr *p, Symb *root)
 {
 	if (p == NULL)
-		return 0;
+		return NULL;
 
-	if (getSymb(root, p->name) != NULL)
-		return 1;
+	Symb *q = NULL;
+	if ((q = getSymb(root, p->name)) != NULL) {
+		strcpy(p->name, q->formula);
+		p = parseExpr(p);
+	}
 
-	return 0;
+	updateExpr(p->left, root);
+	updateExpr(p->right, root);
+
+	return p;
+}
+void testupdateExpr(void)
+{
+	Symb *root = NULL;
+	Expr *p = NULL;
+
+	char *line = NULL;
+	line = "x = 5, y = 6, f = (x + y)";
+	p = addExpr(p, line);
+	printf("symbol registration\n");
+	listExpr(p);
+	root = updateSymb(root, p);
+	printf("\nsymbol tree\n");
+	listSymb(root);
+	
+	removeExpr(&p);
+	line = "x * f * z";
+	p = addExpr(p, line);
+	printf("\nmath expression (before)\n");
+	listExpr(p);
+	p = updateExpr(p, root);
+	printf("\nmath expression (after)\n");
+	listExpr(p);
 }
 
 #endif	/* _SYMBOLIC_H */
