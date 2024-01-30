@@ -53,6 +53,7 @@ Symb *updateSymb(Symb *p, Expr *q)
 /* so the key point is when update/replacement happened.
  * parseExpr must follow,
  * and then keep proceeding to the updated q->left, q->right */
+/* parseExpr added */
 int is_updated_needed(Expr *p, Symb *root)
 {
 	if (p == NULL)
