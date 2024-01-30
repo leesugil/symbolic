@@ -440,8 +440,8 @@ void _removeExpr(Expr *p)
 {
 	if (p != NULL) {
 		_removeExpr(p->left);
-		p->left = NULL;
 		_removeExpr(p->right);
+		p->left = NULL;
 		p->right = NULL;
 		//free(p->name);	no longer dynamically allocated
 		//free(p->op);		no longer dynamically allocated
