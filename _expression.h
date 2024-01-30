@@ -115,6 +115,7 @@ static char *operators[] = {
 	NULL
 };
 
+/* with ", " as a divider (instead of "; ", for example), non-dividing expressions like f = f(x, y) or v = (1.0, 0.0, 0.0) could be challenging. - future project */
 static char *dividers[] = {
 	", ",
 	NULL
