@@ -183,7 +183,7 @@ Expr *parseExpr(Expr *p)
 		return NULL;
 
 	char *prog = "parseExpr";
-	fprintf(stdout, "%s: parsing \"%s\"\n", prog, p->name);
+	fprintf(stderr, "%s: parsing \"%s\"\n", prog, p->name);
 
 	unsigned int index = 0;
 	while (is_outer_blocked_blk(p->name, block_start, block_end, &index))
@@ -224,19 +224,19 @@ Expr *parseExpr(Expr *p)
 			fprintf(stderr, "(9)\n");
 			if (dum_line[0] != '\0') {
 				/* f = (x + y) */
-				fprintf(stdout, "%s: (10) \" = \"-like divider found in \"%s\"\n", prog, p->name);
-				fprintf(stdout, "%s: (10) p->left->name:\"%s\"\n", prog, dum_line);
+				fprintf(stderr, "%s: (10) \" = \"-like divider found in \"%s\"\n", prog, p->name);
+				fprintf(stderr, "%s: (10) p->left->name:\"%s\"\n", prog, dum_line);
 				p->left = addExpr(p->left, dum_line);
-				fprintf(stdout, "%s: (11) back to p->name:\"%s\"\n", prog, p->name);
+				fprintf(stderr, "%s: (11) back to p->name:\"%s\"\n", prog, p->name);
 				parseExprOpBy(p->op, p->name, definitions, NULL, NULL);
-				fprintf(stdout, "%s: (12) p->op:\"%s\"\n", prog, p->op);
+				fprintf(stderr, "%s: (12) p->op:\"%s\"\n", prog, p->op);
 				parseExprRightBy(dum_line, p->name, definitions, NULL, NULL);
 				/* for "x = " or " = ", dum_line == "" */
-				fprintf(stdout, "%s: (12.1) p->right candidate:\"%s\"\n", prog, dum_line);
+				fprintf(stderr, "%s: (12.1) p->right candidate:\"%s\"\n", prog, dum_line);
 				if (dum_line[0] != '\0') {
-					fprintf(stdout, "%s: (13) p->right->name:\"%s\"\n", prog, dum_line);
+					fprintf(stderr, "%s: (13) p->right->name:\"%s\"\n", prog, dum_line);
 					p->right = addExpr(p->right, dum_line);
-					fprintf(stdout, "%s: (14) back to p->name:\"%s\"\n", prog, p->name);
+					fprintf(stderr, "%s: (14) back to p->name:\"%s\"\n", prog, p->name);
 				}
 			} else {
 				/* no definition statements */
@@ -400,23 +400,23 @@ void parseExprRightBy(char w[], char *line, char **bulk, char **b_start, char **
 	unsigned int index = 0;
 	char *p = NULL;
 
-	fprintf(stdout, "%s: parse subject:\"%s\"\n", prog, line);
+	fprintf(stderr, "%s: parse subject:\"%s\"\n", prog, line);
 
 	/* index updated is for bulk */
 	p = strstrblkmaskblk(line, bulk, &index, b_start, b_end);
 	/* when line = " = ", this gave p == NULL */
 
 	if (p == NULL) {
-		fprintf(stdout, "%s: there is no RHS to parse\n", prog);
+		fprintf(stderr, "%s: there is no RHS to parse\n", prog);
 		w[0] = '\0';
 	}
 	else {
-		fprintf(stdout, "%s: RHS before removing the operator part:\"%s\"\n", prog, p);
+		fprintf(stderr, "%s: RHS before removing the operator part:\"%s\"\n", prog, p);
 		int n = strlen(bulk[index]);
-		fprintf(stdout, "%s: deleting the first %d characters\n", prog, n);
+		fprintf(stderr, "%s: deleting the first %d characters\n", prog, n);
 		strcpy(w, p);
 		fcutnstr(w, n);
-		fprintf(stdout, "%s: output:\"%s\"\n", prog, w);
+		fprintf(stderr, "%s: output:\"%s\"\n", prog, w);
 	}
 }
 void testparseExprRightBy(void)
@@ -518,6 +518,90 @@ void testevalExpr(void)
 	p = evalExpr(p);
 	printf("\nevalExpr (after)\n");
 	listExpr(p);
+}
+
+/* reduceExpr */
+/* this is the real challenge. given an arithmetic expression - yes, start with the arithmetic case first - evaluate as much as possible based on known values. */
+/* this could've been implemeted as a stand-alone feature, and this is what essentially doing the algebra */
+/* an idea:
+ * 1) make lists of operations by their properties, like distributive, commutative, associative, etc.
+ * 2) turn an expr into the most possibly distributed order
+ * 3) don't mind the associativity for now, we're not seeking the fastest way to solve it for now
+ * 4) using commutativity whenever applicable, each term in the most distributed form should be symbolically ordered?
+ * 5) how would i detect (number) * (number) * (letter)?
+ * ... */
+Expr *distExprOver(Expr *p, char *prod, char *sum)
+{
+	char *prog = "distExpr";
+
+	if (p == NULL)
+		return NULL;
+
+	if (p->left != NULL)
+		p->left = distExprOver(p->left, prod, sum);
+	if (p->right != NULL)
+		p->right = distExprOver(p->right, prod, sum);
+
+	char line[MAXCHAR] = "";
+	char left[MAXCHAR] = "";
+	char right[MAXCHAR] = "";
+	char dum_line[MAXCHAR] = "";
+	unsigned int index = 0;
+	char *sum2[] = {
+		sum,
+		NULL
+	};
+
+	if (strcmp(p->op, prod) == 0) {
+		if (p->right != NULL) {
+			if (p->left == NULL) {
+				/* impossible */
+				return NULL;
+			}
+			if (strstrmaskblk(p->right->name, sum, &index, block_start, block_end) != NULL) {
+				/* there is an operation in RHS to distribute the primary operation over */
+				/* (p->left->name p->op parseExprLeftBy) parseExprOpBy (p->left->name p->op parseExprRightBy) */
+				parseExprLeftBy(left, p->right->name, sum2, block_start, block_end);
+				parseExprRightBy(right, p->right->name, sum2, block_start, block_end);
+				strcpy(dum_line, p->left->name);
+				if (strstrblkmaskblk(dum_line, operators, &index, block_start, block_end) != NULL)
+					parenthstr(dum_line);
+				strcpy(line, dum_line);
+				strcat(line, p->op);
+				strcat(line, left);
+
+				strcat(line, sum);
+
+				strcpy(dum_line, p->left->name);
+				if (strstrblkmaskblk(dum_line, operators, &index, block_start, block_end) != NULL)
+					parenthstr(dum_line);
+				strcat(line, dum_line);
+				strcat(line, p->op);
+				strcat(line, right);
+
+				strcpy(p->name, line);
+			}
+		}
+	}
+
+	return p;
+}
+void testdistExprOver(void)
+{
+	char *line = "(x * (y + z)) * (a * (b + c))";
+	Expr *p = NULL;
+
+	p = addExpr(p, line);
+
+	printf("original\n");
+	listExpr(p);
+	printf("---\n");
+
+	p = distExprOver(p, " * ", " + ");
+
+	printf("testdistExprOver\n");
+	listExpr(p);
+	printf("---\n");
 }
 
 #endif	/* _EXPRESSION_H */
