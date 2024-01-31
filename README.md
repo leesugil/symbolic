@@ -1,7 +1,14 @@
 # symbolic
 Symbolic calculator for arithmetic operations with fractions
 
-# WHERE I TOOK OFF LAST TIME
+## WIP
+Consider the example:
+(a * (x^2)) + ((b * (x^1)) + (c * (x^0)))
+- x^1 should be replaced by x
+- x^0 should be replaced by 1
+- c * 1 should be replaced by c
+
+## WHERE I TOOK OFF LAST TIME (resolved)
 Updating parseExpr to make sure that DEFN_DIV and EQN_DIV are applied first with strstr, and then OP_DIV later with strstrmask with BLOCK_START and BLOCK_END.
 The more I dig into the project, the more I realize that it take a lot of string parsing & editing work. It's not entirely reinventing the wheel because C doesn't assume it understands unspecified arguments as symbols, but the project is taking more time than I expected with the parsing work.
 Also VAR should go back to SYMB. It makes more sense. Every variable is just a map { strings } -> { doubles }, a constant function.

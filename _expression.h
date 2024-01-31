@@ -177,7 +177,238 @@ Expr *addExpr(Expr *p, char *name)
 
 /* parseExpr: capsulates remove_outer_block, parseExprOp, parseExprLeft, parseExprRight */
 /* input " = " causes error, keep capturing p->left == " = " causing infinite loop */
+Expr *parseExprs(Expr *p, int *flag);		/* check if it has multiple statements */
+Expr *parseExprDef(Expr *p, int *flag);		/* check if it is a definition statement */
+Expr *parseExprComp(Expr *p, int *flag);	/* check if it is a compaison of two statements */
+Expr *parseExprOp(Expr *p);					/* regular */
+
 Expr *parseExpr(Expr *p)
+{
+	char *prog = "parseExpr";
+
+	if (p == NULL)
+		return NULL;
+
+	fprintf(stderr, "%s: parsing \"%s\"\n", prog, p->name);
+
+	fprintf(stderr, "%s: checking if blocked properly\n", prog);
+	int index = 0;
+	if (!is_blocked_properly_blk(p->name, block_start, block_end, &index)) {
+		fprintf(stderr, "%s: block error(s) found in \"%s\"\n", prog, p->name);
+		fprintf(stderr, "%s: returning expr unchanged\n", prog);
+		return p;
+	}
+	fprintf(stderr, "%s: (pass) checking if blocked properly\n", prog);
+
+	fprintf(stderr, "%s: checking if outer blocks are removed\n", prog);
+	index = 0;
+	// make sure there're no redundant outer blocks
+	while (is_outer_blocked_blk(p->name, block_start, block_end, &index)) {
+		fprintf(stderr, "%s: outer block exists in \"%s\", removing...\n", prog, p->name);
+		remove_outer_block(p->name, block_start[index], block_end[index]);
+		fprintf(stderr, "%s: (pass) outer block exists in \"%s\", removing...\n", prog, p->name);
+	}
+	fprintf(stderr, "%s: (pass) checking if outer blocks are removed\n", prog);
+
+	/* see if it's about definition,
+	 * first by commas ',' */
+	/* if not, see if it has LHS and RHS */
+	/* if not, start parsing operations */
+	if (strcmp(p->name, "") != 0) {
+		int flag = 0;
+		/* check dividers ", " */
+		fprintf(stderr, "%s: (1) p->name:\"%s\"\n", prog, p->name);
+		p = parseExprs(p, &flag);
+		if (flag == 1) {
+			/* no dividers */
+			/* check definitions " = " */
+			/* "x = " or " = " */
+			fprintf(stderr, "%s: (8) no \", \"-like dividers found in \"%s\"\n", prog, p->name);
+			p = parseExprDef(p, &flag);
+		}
+		if (flag == 1) {
+			/* no definition statements */
+			/* check LHS, RHS, " == " */
+			fprintf(stderr, "%s: (15) no \" = \"-like divider found in \"%s\"\n", prog, p->name);
+			p = parseExprComp(p, &flag);
+		}
+		if (flag == 1) {
+			/* no comparison statements */
+			/* regular math expressions */
+			fprintf(stderr, "%s: (22) no \" == \"-like divider found in \"%s\"\n", prog, p->name);
+			p = parseExprOp(p);
+		}
+	} else {
+		/* p->name == "" */
+		fprintf(stderr, "%s: p->name empty, nothing to parse\n", prog);
+	}
+
+	return p;
+}
+/* check if it has multiple statements */
+Expr *parseExprs(Expr *p, int *flag)
+{
+	char *prog = "parseExprs";
+
+	if (p == NULL)
+		return p;
+
+	char dum_line[MAXCHAR] = "";
+
+	parseExprLeftBy(dum_line, p->name, dividers, block_start, block_end);
+	/* use block_start and block_end to make a distinction when
+	 * vector notations are adopted as v = (x, y, z)
+	 * in future projects */
+	fprintf(stderr, "%s: (2)\n", prog);
+	if (dum_line[0] != '\0') {
+		*flag = 0;
+		/* f = (x + y), g = (y + z) */
+		fprintf(stderr, "(2.1) \", \"-like divider found in \"%s\"\n", p->name);
+		fprintf(stderr, "(3) candidate for p->left->name:\"%s\"\n", dum_line);
+		p->left = addExpr(p->left, dum_line);
+		fprintf(stderr, "(4) back to p->name:\"%s\"\n", p->name);
+		/* parseExprOpBy will apply mask... need a fix */
+		/* fixed (potentially) */
+		//parseExprOpBy(p->op, p->name, dividers, NULL, NULL);
+		/* wait, why was the masking an issue? */
+		parseExprOpBy(p->op, p->name, dividers, block_start, block_end);
+		fprintf(stderr, "(5) p->op:\"%s\"\n", p->op);
+		//parseExprRightBy(dum_line, p->name, dividers, NULL, NULL);
+		// why was the masking an issue?
+		parseExprRightBy(dum_line, p->name, dividers, block_start, block_end);
+		if (dum_line[0] != '\0') {
+			fprintf(stderr, "(6) p->right->name:\"%s\"\n", dum_line);
+			p->right = addExpr(p->right, dum_line);
+			fprintf(stderr, "(7) back to p->name:\"%s\"\n", p->name);
+		} else {
+			fprintf(stderr, "%s: p->right = NULL\n", prog);
+			if (p->right != NULL) {
+				fprintf(stderr, "%s: wait, p->right != NULL. check this out in detail.\n", prog);
+				fprintf(stderr, "%s: p->right->name=\"%s\"\n", prog, p->right->name);
+			}
+		}
+	} else {
+		fprintf(stderr, "%s: nothing to parse, flag == 1\n", prog);
+		*flag = 1;
+	}
+
+	return p;
+}
+/* check if it is a definition statement */
+Expr *parseExprDef(Expr *p, int *flag)
+{
+	char *prog = "parseExprDef";
+
+	char dum_line[MAXCHAR] = "";
+
+	parseExprLeftBy(dum_line, p->name, definitions, block_start, block_end);
+	fprintf(stderr, "(9)\n");
+	if (dum_line[0] != '\0') {
+		*flag = 0;
+		/* f = (x + y) */
+		fprintf(stderr, "%s: (10) \" = \"-like divider found in \"%s\"\n", prog, p->name);
+		fprintf(stderr, "%s: (10) candidate for p->left->name:\"%s\"\n", prog, dum_line);
+		p->left = addExpr(p->left, dum_line);
+		fprintf(stderr, "%s: (11) back to p->name:\"%s\"\n", prog, p->name);
+		parseExprOpBy(p->op, p->name, definitions, block_start, block_end);
+		fprintf(stderr, "%s: (12) p->op:\"%s\"\n", prog, p->op);
+		parseExprRightBy(dum_line, p->name, definitions, block_start, block_end);
+		/* for "x = " or " = ", dum_line == "" */
+		fprintf(stderr, "%s: (12.1) p->right candidate:\"%s\"\n", prog, dum_line);
+		if (dum_line[0] != '\0') {
+			fprintf(stderr, "%s: (13) p->right->name:\"%s\"\n", prog, dum_line);
+			p->right = addExpr(p->right, dum_line);
+			fprintf(stderr, "%s: (14) back to p->name:\"%s\"\n", prog, p->name);
+		} else {
+			fprintf(stderr, "%s: p->right = NULL\n", prog);
+			if (p->right != NULL) {
+				fprintf(stderr, "%s: wait, p->right != NULL. check this out in detail.\n", prog);
+				fprintf(stderr, "%s: p->right->name=\"%s\"\n", prog, p->right->name);
+			}
+		}
+	} else {
+		fprintf(stderr, "%s: nothing to parse, flag == 1\n", prog);
+		*flag = 1;
+	}
+
+	return p;
+}
+/* check if it is a compaison of two statements */
+Expr *parseExprComp(Expr *p, int *flag)
+{
+	char *prog = "parseExprComp";
+
+	char dum_line[MAXCHAR] = "";
+
+	parseExprLeftBy(dum_line, p->name, comparisons, block_start, block_end);
+	fprintf(stderr, "(16)\n");
+	if (dum_line[0] != '\0') {
+		*flag = 0;
+		/* f + x == g * z */
+		fprintf(stderr, "(17) \" == \"-like divider found in \"%s\"\n", p->name);
+		fprintf(stderr, "(17) cadidate for p->left->name:\"%s\"\n", dum_line);
+		p->left = addExpr(p->left, dum_line);
+		fprintf(stderr, "(18) back to p->name:\"%s\"\n", p->name);
+		parseExprOpBy(p->op, p->name, comparisons, block_start, block_end);
+		fprintf(stderr, "(19) p->op:\"%s\"\n", p->op);
+		parseExprRightBy(dum_line, p->name, comparisons, block_start, block_end);
+		if (dum_line[0] != '\0') {
+			fprintf(stderr, "(20) p->right->name:\"%s\"\n", dum_line);
+			p->right = addExpr(p->right, dum_line);
+			fprintf(stderr, "(21) back to p->name:\"%s\"\n", p->name);
+		} else {
+			fprintf(stderr, "%s: p->right = NULL\n", prog);
+			if (p->right != NULL) {
+				fprintf(stderr, "%s: wait, p->right != NULL. check this out in detail.\n", prog);
+				fprintf(stderr, "%s: p->right->name=\"%s\"\n", prog, p->right->name);
+			}
+		}
+	} else {
+		fprintf(stderr, "%s: nothing to parse, flag == 1\n", prog);
+		*flag = 1;
+	}
+
+	return p;
+}
+/* regular */
+Expr *parseExprOp(Expr *p)
+{
+	char *prog = "parseExprOp";
+
+	char dum_line[MAXCHAR] = "";
+
+	parseExprLeftBy(dum_line, p->name, operators, block_start, block_end);
+	if (dum_line[0] != '\0') {
+		fprintf(stderr, "(23) p->left->name:\"%s\"\n", dum_line);
+		p->left = addExpr(p->left, dum_line);
+		fprintf(stderr, "(24) back to p->name:\"%s\"\n", p->name);
+	} else {
+		fprintf(stderr, "%s: p->left = NULL\n", prog);
+		if (p->left != NULL) {
+			fprintf(stderr, "%s: wait, p->left != NULL ??\n", prog);
+			fprintf(stderr, "%s: p->left->name=\"%s\"\n", prog, p->left->name);
+		}
+	}
+	parseExprOpBy(p->op, p->name, operators, block_start, block_end);
+	fprintf(stderr, "(25) p->op:\"%s\"\n", p->op);
+	parseExprRightBy(dum_line, p->name, operators, block_start, block_end);
+	if (dum_line[0] != '\0') {
+		fprintf(stderr, "(26) p->right->name:\"%s\"\n", dum_line);
+		p->right = addExpr(p->right, dum_line);
+		fprintf(stderr, "(27) back to p->name:\"%s\"\n", p->name);
+	} else {
+		fprintf(stderr, "%s: p->right = NULL\n", prog);
+		if (p->left != NULL) {
+			fprintf(stderr, "%s: wait, p->right != NULL ??\n", prog);
+			fprintf(stderr, "%s: p->right->name=\"%s\"\n", prog, p->right->name);
+		}
+	}
+
+	return p;
+}
+
+/* backup */
+Expr *parseExpr2(Expr *p)
 {
 	if (p == NULL)
 		return NULL;
@@ -185,7 +416,7 @@ Expr *parseExpr(Expr *p)
 	char *prog = "parseExpr";
 	fprintf(stderr, "%s: parsing \"%s\"\n", prog, p->name);
 
-	unsigned int index = 0;
+	int index = 0;
 	while (is_outer_blocked_blk(p->name, block_start, block_end, &index))
 		remove_outer_block(p->name, block_start[index], block_end[index]);
 
@@ -283,7 +514,6 @@ Expr *parseExpr(Expr *p)
 		/* p->name == "" */
 		fprintf(stderr, "%s: p->name empty\n", prog);
 	}
-
 
 	return p;
 }
