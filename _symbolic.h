@@ -17,7 +17,7 @@
 Symb *updateSymb(Symb *p, Expr *q)
 {
 	char *prog = "updateSymb";
-	fprintf(stdout, "%s: expr->name:\"%s\"\n", prog, q->name);
+	fprintf(stderr, "%s: expr->name:\"%s\"\n", prog, q->name);
 
 	if (q == NULL)
 		return p;
@@ -27,7 +27,7 @@ Symb *updateSymb(Symb *p, Expr *q)
 
 	if (strcmp(q->op, " = ") == 0) {
 		/* add/update symbol */
-		fprintf(stdout, "%s: add/update a symbol with \"%s\" = \"%s\"\n", prog, q->left->name, q->right->name);
+		fprintf(stderr, "%s: add/update a symbol with \"%s\" = \"%s\"\n", prog, q->left->name, q->right->name);
 		if (q->right == NULL) {
 			/* this is a special case like expr "x = " having a NULL q->right */
 			/* we send an empty string "" to addSymb */

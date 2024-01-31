@@ -23,18 +23,27 @@ int main(int argc, char *argv[])
 		printf("original expr:\n");
 		listExpr(expr);
 		printf("---\n");
+
 		symb = updateSymb(symb, expr);
 		printf("symbols:\n");
 		listSymb(symb);
 		printf("---\n");
+
 		expr = updateExpr(expr, symb);
 		printf("symbols updated expr:\n");
 		listExpr(expr);
 		printf("---\n");
+
 		expr = evalExpr(expr);
 		printf("evaluated expr:\n");
 		listExpr(expr);
 		printf("---\n");
+
+		expr = distExpr(expr, " * ", " + ");
+		printf("distributed expr:\n");
+		listExpr(expr);
+		printf("---\n");
+
 		removeExpr(&expr);
 	}
 

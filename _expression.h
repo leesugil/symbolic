@@ -530,6 +530,30 @@ void testevalExpr(void)
  * 4) using commutativity whenever applicable, each term in the most distributed form should be symbolically ordered?
  * 5) how would i detect (number) * (number) * (letter)?
  * ... */
+Expr *refreshExpr(Expr *p)
+{
+	if (p->left == NULL || p-> right == NULL)
+		return p;
+
+	if (strcmp(p->op, "") == 0)
+		return p;
+
+	char dum_line[MAXCHAR] = "";
+
+	strcpy(p->name, p->left->name);
+	if (strcmp(p->left->op, "") != 0)
+		parenthstr(p->name);
+
+	strcat(p->name, p->op);
+
+	strcpy(dum_line, p->right->name);
+	if (strcmp(p->right->op, "") != 0)
+		parenthstr(dum_line);
+	strcat(p->name, dum_line);
+
+	return p;
+}
+
 Expr *distExprLeft2Right(Expr *p, char *prod, char *sum)
 {
 	char *prog = "distExprLeft2Right";
@@ -552,10 +576,14 @@ Expr *distExprLeft2Right(Expr *p, char *prod, char *sum)
 		NULL
 	};
 
+	/* just update p->name based on p->left and p->right */
+	p = refreshExpr(p);
+
 	if (strcmp(p->op, prod) == 0) {
 		if (p->left != NULL && p->right != NULL) {
 			/* left-to-right distribution */
-			if (strstrmaskblk(p->right->name, sum, &index, block_start, block_end) != NULL) {
+			//if (strstrmaskblk(p->right->name, sum, &index, block_start, block_end) != NULL) {
+			if (strcmp(p->right->op, sum) == 0) {
 				/* there is an operation in RHS to distribute the primary operation over */
 				/* (p->left->name p->op parseExprLeftBy) parseExprOpBy (p->left->name p->op parseExprRightBy) */
 				parseExprLeftBy(left, p->right->name, sum2, block_start, block_end);
@@ -631,10 +659,14 @@ Expr *distExprRight2Left(Expr *p, char *prod, char *sum)
 	};
 	/* realized that the function's supposed to update p->name even if there's nothing to distribute at the current level because of updates made in p->left and p->right */
 
+	/* just update p->name based on p->left and p->right */
+	p = refreshExpr(p);
+
 	if (strcmp(p->op, prod) == 0) {
 		if (p->left != NULL && p->right != NULL) {
 			/* right-to-left distribution */
-			if (strstrmaskblk(p->left->name, sum, &index, block_start, block_end) != NULL) {
+			//if (strstrmaskblk(p->left->name, sum, &index, block_start, block_end) != NULL) {
+			if (strcmp(p->left->op, sum) == 0) {
 				/* there is an operation in LHS to distribute the primary operation over */
 				/* (p->right->name p->op parseExprLeftBy) parseExprOpBy (p->right->name p->op parseExprRightBy) */
 				parseExprLeftBy(left, p->left->name, sum2, block_start, block_end);
@@ -663,24 +695,6 @@ Expr *distExprRight2Left(Expr *p, char *prod, char *sum)
 				p = addExpr(p, line);
 			}
 		}
-	} else {
-		/* just update p->name based on p->left and p->right */
-		if (p->left == NULL || p-> right == NULL)
-			return p;
-
-		if (strcmp(p->op, "") == 0)
-			return p;
-
-		strcpy(p->name, p->left->name);
-		if (strcmp(p->left->op, "") != 0)
-			parenthstr(p->name);
-
-		strcat(p->name, p->op);
-
-		strcpy(dum_line, p->right->name);
-		if (strcmp(p->right->op, "") != 0)
-			parenthstr(dum_line);
-		strcat(p->name, dum_line);
 	}
 
 	return p;
@@ -708,15 +722,36 @@ Expr *distExpr(Expr *p, char *prod, char *sum)
 {
 	char *prog = "distExpr";
 
+	if (p == NULL)
+		return p;
+
+	char dum_line[MAXCHAR] = "";
+	strcpy(dum_line, p->name);
+
 	p = distExprLeft2Right(p, prod, sum);
 	p = distExprRight2Left(p, prod, sum);
+
+	int c = 1;
+
+	fprintf(stderr, "%s:%s\n", prog, dum_line);
+
+	while (strcmp(p->name, dum_line) != 0) {
+		strcpy(dum_line, p->name);
+		fprintf(stderr, "%s:%s\n", prog, dum_line);
+		p = distExprLeft2Right(p, prod, sum);
+		p = distExprRight2Left(p, prod, sum);
+		c++;
+	}
+
+	fprintf(stderr, "%s: times right-and-left distribution set executed: %d\n", prog, c);
 
 	return p;
 }
 void testdistExpr(void)
 {
-	char *line = "((x + y) * z) * (a * (b + c))";
+	//char *line = "((x + y) * z) * (a * (b + c))";
 	//char *line = "(x + y) * z";
+	char *line = "(2 * ((5 + 6) * z))";
 	Expr *p = NULL;
 
 	p = addExpr(p, line);
