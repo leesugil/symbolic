@@ -530,7 +530,7 @@ void testevalExpr(void)
  * 4) using commutativity whenever applicable, each term in the most distributed form should be symbolically ordered?
  * 5) how would i detect (number) * (number) * (letter)?
  * ... */
-Expr *distExprOver(Expr *p, char *prod, char *sum)
+Expr *distExprLeft2Right(Expr *p, char *prod, char *sum)
 {
 	char *prog = "distExpr";
 
@@ -538,9 +538,9 @@ Expr *distExprOver(Expr *p, char *prod, char *sum)
 		return NULL;
 
 	if (p->left != NULL)
-		p->left = distExprOver(p->left, prod, sum);
+		p->left = distExprLeft2Right(p->left, prod, sum);
 	if (p->right != NULL)
-		p->right = distExprOver(p->right, prod, sum);
+		p->right = distExprLeft2Right(p->right, prod, sum);
 
 	char line[MAXCHAR] = "";
 	char left[MAXCHAR] = "";
@@ -553,40 +553,40 @@ Expr *distExprOver(Expr *p, char *prod, char *sum)
 	};
 
 	if (strcmp(p->op, prod) == 0) {
-		if (p->right != NULL) {
-			if (p->left == NULL) {
-				/* impossible */
-				return NULL;
-			}
+		if (p->left != NULL && p->right != NULL) {
+			/* left-to-right distribution */
 			if (strstrmaskblk(p->right->name, sum, &index, block_start, block_end) != NULL) {
 				/* there is an operation in RHS to distribute the primary operation over */
 				/* (p->left->name p->op parseExprLeftBy) parseExprOpBy (p->left->name p->op parseExprRightBy) */
 				parseExprLeftBy(left, p->right->name, sum2, block_start, block_end);
 				parseExprRightBy(right, p->right->name, sum2, block_start, block_end);
 				strcpy(dum_line, p->left->name);
-				if (strstrblkmaskblk(dum_line, operators, &index, block_start, block_end) != NULL)
+				if (strcmp(p->left->op, "") != 0)
 					parenthstr(dum_line);
+				strcat(dum_line, p->op);
+				strcat(dum_line, left);
+				parenthstr(dum_line);
 				strcpy(line, dum_line);
-				strcat(line, p->op);
-				strcat(line, left);
 
 				strcat(line, sum);
 
 				strcpy(dum_line, p->left->name);
-				if (strstrblkmaskblk(dum_line, operators, &index, block_start, block_end) != NULL)
+				if (strcmp(p->left->op, "") != 0)
 					parenthstr(dum_line);
+				strcat(dum_line, p->op);
+				strcat(dum_line, right);
+				parenthstr(dum_line);
 				strcat(line, dum_line);
-				strcat(line, p->op);
-				strcat(line, right);
 
-				strcpy(p->name, line);
+				removeExpr(&p);
+				p = addExpr(p, line);
 			}
 		}
 	}
 
 	return p;
 }
-void testdistExprOver(void)
+void testdistExprLeft2Right(void)
 {
 	char *line = "(x * (y + z)) * (a * (b + c))";
 	Expr *p = NULL;
@@ -597,9 +597,9 @@ void testdistExprOver(void)
 	listExpr(p);
 	printf("---\n");
 
-	p = distExprOver(p, " * ", " + ");
+	p = distExprLeft2Right(p, " * ", " + ");
 
-	printf("testdistExprOver\n");
+	printf("testdistExprLeft2Right\n");
 	listExpr(p);
 	printf("---\n");
 }
