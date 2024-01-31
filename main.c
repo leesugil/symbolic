@@ -39,7 +39,7 @@ int main(int argc, char *argv[])
 		listExpr(expr);
 		printf("---\n");
 
-		expr = distExpr(expr, " * ", " + ");
+		expr = distExpr(expr);
 		printf("distributed expr:\n");
 		listExpr(expr);
 		printf("---\n");
