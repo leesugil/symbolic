@@ -532,7 +532,7 @@ void testevalExpr(void)
  * ... */
 Expr *distExprLeft2Right(Expr *p, char *prod, char *sum)
 {
-	char *prog = "distExpr";
+	char *prog = "distExprLeft2Right";
 
 	if (p == NULL)
 		return NULL;
@@ -600,6 +600,134 @@ void testdistExprLeft2Right(void)
 	p = distExprLeft2Right(p, " * ", " + ");
 
 	printf("testdistExprLeft2Right\n");
+	listExpr(p);
+	printf("---\n");
+}
+
+Expr *distExprRight2Left(Expr *p, char *prod, char *sum)
+{
+	char *prog = "distExprRight2Left";
+
+	if (p == NULL)
+		return NULL;
+
+	fprintf(stderr, "%s: considering \"%s\"\n", prog, p->name);
+
+	if (p->left != NULL)
+		p->left = distExprRight2Left(p->left, prod, sum);
+	if (p->right != NULL)
+		p->right = distExprRight2Left(p->right, prod, sum);
+
+	fprintf(stderr, "%s: back on \"%s\"\n", prog, p->name);
+
+	char line[MAXCHAR] = "";
+	char left[MAXCHAR] = "";
+	char right[MAXCHAR] = "";
+	char dum_line[MAXCHAR] = "";
+	unsigned int index = 0;
+	char *sum2[] = {
+		sum,
+		NULL
+	};
+	/* realized that the function's supposed to update p->name even if there's nothing to distribute at the current level because of updates made in p->left and p->right */
+
+	if (strcmp(p->op, prod) == 0) {
+		if (p->left != NULL && p->right != NULL) {
+			/* right-to-left distribution */
+			if (strstrmaskblk(p->left->name, sum, &index, block_start, block_end) != NULL) {
+				/* there is an operation in LHS to distribute the primary operation over */
+				/* (p->right->name p->op parseExprLeftBy) parseExprOpBy (p->right->name p->op parseExprRightBy) */
+				parseExprLeftBy(left, p->left->name, sum2, block_start, block_end);
+				parseExprRightBy(right, p->left->name, sum2, block_start, block_end);
+				strcpy(line, left);
+				strcat(line, p->op);
+				strcpy(dum_line, p->right->name);
+				if (strcmp(p->right->op, "") != 0)
+					parenthstr(dum_line);
+				strcat(line, dum_line);
+				parenthstr(line);
+
+				strcat(line, sum);
+
+				char dum_line2[MAXCHAR] = "";
+				strcpy(dum_line, right);
+				strcat(dum_line, p->op);
+				strcpy(dum_line2, p->right->name);
+				if (strcmp(p->right->op, "") != 0)
+					parenthstr(dum_line2);
+				strcat(dum_line, dum_line2);
+				parenthstr(dum_line);
+				strcat(line, dum_line);
+
+				removeExpr(&p);
+				p = addExpr(p, line);
+			}
+		}
+	} else {
+		/* just update p->name based on p->left and p->right */
+		if (p->left == NULL || p-> right == NULL)
+			return p;
+
+		if (strcmp(p->op, "") == 0)
+			return p;
+
+		strcpy(p->name, p->left->name);
+		if (strcmp(p->left->op, "") != 0)
+			parenthstr(p->name);
+
+		strcat(p->name, p->op);
+
+		strcpy(dum_line, p->right->name);
+		if (strcmp(p->right->op, "") != 0)
+			parenthstr(dum_line);
+		strcat(p->name, dum_line);
+	}
+
+	return p;
+}
+void testdistExprRight2Left(void)
+{
+	//char *line = "((x + y) * z) * ((a + b) * c)";
+	char *line = "(((x + y) * z) * (a * b)) + (((x + y) * z) * (a * c))";
+	Expr *p = NULL;
+
+	p = addExpr(p, line);
+
+	printf("original\n");
+	listExpr(p);
+	printf("---\n");
+
+	p = distExprRight2Left(p, " * ", " + ");
+
+	printf("testdistExprRight2Left\n");
+	listExpr(p);
+	printf("---\n");
+}
+
+Expr *distExpr(Expr *p, char *prod, char *sum)
+{
+	char *prog = "distExpr";
+
+	p = distExprLeft2Right(p, prod, sum);
+	p = distExprRight2Left(p, prod, sum);
+
+	return p;
+}
+void testdistExpr(void)
+{
+	char *line = "((x + y) * z) * (a * (b + c))";
+	//char *line = "(x + y) * z";
+	Expr *p = NULL;
+
+	p = addExpr(p, line);
+
+	printf("original\n");
+	listExpr(p);
+	printf("---\n");
+
+	p = distExpr(p, " * ", " + ");
+
+	printf("testdistExpr\n");
 	listExpr(p);
 	printf("---\n");
 }
