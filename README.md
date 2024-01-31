@@ -7,6 +7,11 @@ Consider the example:
 - x^1 should be replaced by x
 - x^0 should be replaced by 1
 - c * 1 should be replaced by c
+Also the example:
+a * x^2 + b * x + c
+would not parse as expected:
+	a
+	x^2 + b * x + c
 
 ## WHERE I TOOK OFF LAST TIME (resolved)
 Updating parseExpr to make sure that DEFN_DIV and EQN_DIV are applied first with strstr, and then OP_DIV later with strstrmask with BLOCK_START and BLOCK_END.
