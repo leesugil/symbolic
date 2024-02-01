@@ -44,6 +44,13 @@ int main(int argc, char *argv[])
 		listExpr(expr);
 		printf("---\n");
 
+		// test
+		//char line[MAXCHAR] = "";
+		//strcpy(line, expr->name);
+		//removeExpr(&expr);
+		//expr = addExpr(expr, line);
+		//end of test
+
 		expr = calcExpr(expr);
 		printf("calculated expr:\n");
 		listExpr(expr);

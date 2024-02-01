@@ -205,6 +205,7 @@ Expr *parseExprDef(Expr *p, int *flag);		/* check if it is a definition statemen
 Expr *parseExprSt(Expr *p, int *flag);	/* check if it is a mathematical statement with LHS and RHS */
 Expr *parseExprReg(Expr *p, char **op_list);					/* regular (x + y) / z */
 void parseNegSign(char s[]);
+void refreshExprTree(Expr **p);
 
 Expr *parseExpr(Expr *p)
 {
@@ -985,6 +986,8 @@ Expr *_distExpr(Expr *p, char *prod, char *sum)
 
 	fprintf(stderr, "%s: times right-and-left distribution set executed: %d\n", prog, c);
 
+	refreshExprTree(&p);
+
 	return p;
 }
 void test_distExpr(void)
@@ -1089,6 +1092,7 @@ Expr *calcExpr(Expr *p)
 	if (p == NULL)
 		return NULL;
 
+	// postorder traverse
 	fprintf(stderr, "%s: (start) p->name:%s\n", prog, p->name);
 
 	fprintf(stderr, "%s: p->name:%s checking left\n", prog, p->name);
@@ -1112,7 +1116,11 @@ Expr *calcExpr(Expr *p)
 void testcalcExpr(void)
 {
 	//char *line = "2 * (3^1 % 2) + 4 / 2^2 * x - 7^0";
-	char *line = "a * x^2 + b * x^1 + c * x^0";
+	//char *line = "a * x^2 + b * x^1 + c * x^0";
+	//char *line = "-1 * 3 * a * 4 * 7 * -1";
+	//char *line = "-1 * 3 * a * 4 * 7 * -1 + -1 * 3 * b * 2 * 7 * -1";
+	//char *line = "-1 * 3 * a * 2^2 * 7 * -1";
+	char *line = "-2 * (a + b) * -1";
 	Expr *p = NULL;
 
 	p = addExpr(p, line);
@@ -1121,9 +1129,13 @@ void testcalcExpr(void)
 	listExpr(p);
 	printf("---\n");
 
-	p = calcExpr(p);
+	printf("after distributing\n");
+	p = distExpr(p);
+	listExpr(p);
+	printf("---\n");
 
 	printf("testcalcExpr\n");
+	p = calcExpr(p);
 	listExpr(p);
 	printf("---\n");
 }
@@ -1285,5 +1297,13 @@ Expr *_calcExprMod(Expr *p)
 	return p;
 }
 
+void refreshExprTree(Expr **p)
+{
+	char line[MAXCHAR] = "";
+
+	strcpy(line, (*p)->name);
+	removeExpr(p);
+	*p = addExpr(*p, line);
+}
 
 #endif	/* _EXPRESSION_H */
