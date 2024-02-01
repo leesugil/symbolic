@@ -969,6 +969,11 @@ void testdistExpr(void)
 	printf("---\n");
 }
 
+Expr *_calcExprMult(Expr *p);
+Expr *_calcExprDiv(Expr *p);
+Expr *_calcExprAdd(Expr *p);
+Expr *_calcExprSub(Expr *p);
+
 Expr *calcExpr(Expr *p)
 {
 	char *prog = "calcExpr";
@@ -985,27 +990,18 @@ Expr *calcExpr(Expr *p)
 	p->right = calcExpr(p->right);
 	fprintf(stderr, "%s: (pass) p->name:%s checking right\n", prog, p->name);
 
-	if (strcmp(p->op, " * ") == 0) {
-		fprintf(stderr, "%s: p->op:%s\n", prog, p->op);
-		char *leftp = NULL;
-		double left = strtod(p->left->name, &leftp);
-		fprintf(stderr, "%s: leftp:%s\n", prog, leftp);
-		if (strlen(leftp) == 0) {
-			char *rightp = NULL;
-			double right = strtod(p->right->name, &rightp);
-			fprintf(stderr, "%s: rightp:%s\n", prog, rightp);
-			if (strlen(rightp) == 0) {
-				/* double-to-str */
-				sprintf(p->name, "%g", left * right);
-			}
-		}
-	}
+	//p = refreshExpr(p);
+
+	p = _calcExprMult(p);
+	p = _calcExprDiv(p);
+	p = _calcExprAdd(p);
+	p = _calcExprSub(p);
 
 	return p;
 }
 void testcalcExpr(void)
 {
-	char *line = "-1.2 * 3.4e-5";
+	char *line = "(2 * 3) + (4 / 2) - 7";
 	Expr *p = NULL;
 
 	p = addExpr(p, line);
@@ -1019,6 +1015,99 @@ void testcalcExpr(void)
 	printf("testcalcExpr\n");
 	listExpr(p);
 	printf("---\n");
+}
+
+Expr *_calcExprMult(Expr *p)
+{
+	char *prog = "_calcExprMult";
+
+	if (strcmp(p->op, " * ") == 0) {
+		fprintf(stderr, "%s: p->op:%s\n", prog, p->op);
+		char *leftp = NULL;
+		double left = strtod(p->left->name, &leftp);
+		fprintf(stderr, "%s: leftp:%s\n", prog, leftp);
+		if (strlen(leftp) == 0) {
+			char *rightp = NULL;
+			double right = strtod(p->right->name, &rightp);
+			fprintf(stderr, "%s: rightp:%s\n", prog, rightp);
+			if (strlen(rightp) == 0) {
+				/* double-to-str */
+				double output = left * right;
+				sprintf(p->name, "%g", output);
+			}
+		}
+	}
+
+	return p;
+}
+Expr *_calcExprDiv(Expr *p)
+{
+	char *prog = "_calcExprDiv";
+
+	if (strcmp(p->op, " / ") == 0) {
+		fprintf(stderr, "%s: p->op:%s\n", prog, p->op);
+		char *leftp = NULL;
+		double left = strtod(p->left->name, &leftp);
+		fprintf(stderr, "%s: leftp:%s\n", prog, leftp);
+		if (strlen(leftp) == 0) {
+			char *rightp = NULL;
+			double right = strtod(p->right->name, &rightp);
+			fprintf(stderr, "%s: rightp:%s\n", prog, rightp);
+			if (strlen(rightp) == 0) {
+				/* double-to-str */
+				double output = left / right;
+				sprintf(p->name, "%g", output);
+			}
+		}
+	}
+
+	return p;
+}
+Expr *_calcExprAdd(Expr *p)
+{
+	char *prog = "_calcExprAdd";
+
+	if (strcmp(p->op, " + ") == 0) {
+		fprintf(stderr, "%s: p->op:%s\n", prog, p->op);
+		char *leftp = NULL;
+		double left = strtod(p->left->name, &leftp);
+		fprintf(stderr, "%s: leftp:%s\n", prog, leftp);
+		if (strlen(leftp) == 0) {
+			char *rightp = NULL;
+			double right = strtod(p->right->name, &rightp);
+			fprintf(stderr, "%s: rightp:%s\n", prog, rightp);
+			if (strlen(rightp) == 0) {
+				/* double-to-str */
+				double output = left + right;
+				sprintf(p->name, "%g", output);
+			}
+		}
+	}
+
+	return p;
+}
+Expr *_calcExprSub(Expr *p)
+{
+	char *prog = "_calcExprSub";
+
+	if (strcmp(p->op, " - ") == 0) {
+		fprintf(stderr, "%s: p->op:%s\n", prog, p->op);
+		char *leftp = NULL;
+		double left = strtod(p->left->name, &leftp);
+		fprintf(stderr, "%s: leftp:%s\n", prog, leftp);
+		if (strlen(leftp) == 0) {
+			char *rightp = NULL;
+			double right = strtod(p->right->name, &rightp);
+			fprintf(stderr, "%s: rightp:%s\n", prog, rightp);
+			if (strlen(rightp) == 0) {
+				/* double-to-str */
+				double output = left - right;
+				sprintf(p->name, "%g", output);
+			}
+		}
+	}
+
+	return p;
 }
 
 
