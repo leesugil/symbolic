@@ -204,6 +204,7 @@ Expr *parseExprs(Expr *p, int *flag);		/* check if it has multiple statements */
 Expr *parseExprDef(Expr *p, int *flag);		/* check if it is a definition statement */
 Expr *parseExprSt(Expr *p, int *flag);	/* check if it is a mathematical statement with LHS and RHS */
 Expr *parseExprReg(Expr *p, char **op_list);					/* regular (x + y) / z */
+void parseNegSign(char s[]);
 
 Expr *parseExpr(Expr *p)
 {
@@ -271,6 +272,11 @@ Expr *parseExpr(Expr *p)
 
 	return p;
 }
+/* -x ==> -1 * x */
+void parseNegSign(char s[])
+{
+	convertNegSign(s);
+}
 /* check if it has multiple statements */
 Expr *parseExprs(Expr *p, int *flag)
 {
@@ -291,6 +297,7 @@ Expr *parseExprs(Expr *p, int *flag)
 		/* f = (x + y), g = (y + z) */
 		fprintf(stderr, "(2.1) \", \"-like divider found in \"%s\"\n", p->name);
 		fprintf(stderr, "(3) candidate for p->left->name:\"%s\"\n", dum_line);
+		parseNegSign(dum_line);
 		p->left = addExpr(p->left, dum_line);
 		fprintf(stderr, "(4) back to p->name:\"%s\"\n", p->name);
 		/* parseExprOpBy will apply mask... need a fix */
@@ -304,6 +311,7 @@ Expr *parseExprs(Expr *p, int *flag)
 		parseExprRightBy(dum_line, p->name, dividers, block_start, block_end);
 		if (dum_line[0] != '\0') {
 			fprintf(stderr, "(6) p->right->name:\"%s\"\n", dum_line);
+			parseNegSign(dum_line);
 			p->right = addExpr(p->right, dum_line);
 			fprintf(stderr, "(7) back to p->name:\"%s\"\n", p->name);
 		} else {
@@ -334,6 +342,7 @@ Expr *parseExprDef(Expr *p, int *flag)
 		/* f = (x + y) */
 		fprintf(stderr, "%s: (10) \" = \"-like divider found in \"%s\"\n", prog, p->name);
 		fprintf(stderr, "%s: (10) candidate for p->left->name:\"%s\"\n", prog, dum_line);
+		parseNegSign(dum_line);
 		p->left = addExpr(p->left, dum_line);
 		fprintf(stderr, "%s: (11) back to p->name:\"%s\"\n", prog, p->name);
 		parseExprOpBy(p->op, p->name, definitions, block_start, block_end);
@@ -343,6 +352,7 @@ Expr *parseExprDef(Expr *p, int *flag)
 		fprintf(stderr, "%s: (12.1) p->right candidate:\"%s\"\n", prog, dum_line);
 		if (dum_line[0] != '\0') {
 			fprintf(stderr, "%s: (13) p->right->name:\"%s\"\n", prog, dum_line);
+			parseNegSign(dum_line);
 			p->right = addExpr(p->right, dum_line);
 			fprintf(stderr, "%s: (14) back to p->name:\"%s\"\n", prog, p->name);
 		} else {
@@ -373,6 +383,7 @@ Expr *parseExprSt(Expr *p, int *flag)
 		/* f + x == g * z */
 		fprintf(stderr, "(17) \" == \"-like divider found in \"%s\"\n", p->name);
 		fprintf(stderr, "(17) cadidate for p->left->name:\"%s\"\n", dum_line);
+		parseNegSign(dum_line);
 		p->left = addExpr(p->left, dum_line);
 		fprintf(stderr, "(18) back to p->name:\"%s\"\n", p->name);
 		parseExprOpBy(p->op, p->name, comparisons, block_start, block_end);
@@ -380,6 +391,7 @@ Expr *parseExprSt(Expr *p, int *flag)
 		parseExprRightBy(dum_line, p->name, comparisons, block_start, block_end);
 		if (dum_line[0] != '\0') {
 			fprintf(stderr, "(20) p->right->name:\"%s\"\n", dum_line);
+			parseNegSign(dum_line);
 			p->right = addExpr(p->right, dum_line);
 			fprintf(stderr, "(21) back to p->name:\"%s\"\n", p->name);
 		} else {
@@ -418,14 +430,18 @@ Expr *parseExprReg(Expr *p, char **op_list)
 {
 	char *prog = "parseExprOp";
 
-	if (strcmp(p->op, "") != 0)
-		return p;
-
 	char dum_line[MAXCHAR] = "";
+	strcpy(dum_line, p->name);
+
+	if (strcmp(p->op, "") != 0) {
+		parseNegSign(dum_line);
+		return p;
+	}
 
 	parseExprLeftBy(dum_line, p->name, op_list, block_start, block_end);
 	if (dum_line[0] != '\0') {
 		fprintf(stderr, "(23) p->left->name:\"%s\"\n", dum_line);
+		parseNegSign(dum_line);
 		p->left = addExpr(p->left, dum_line);
 		fprintf(stderr, "(24) back to p->name:\"%s\"\n", p->name);
 	} else {
@@ -440,6 +456,7 @@ Expr *parseExprReg(Expr *p, char **op_list)
 	parseExprRightBy(dum_line, p->name, op_list, block_start, block_end);
 	if (dum_line[0] != '\0') {
 		fprintf(stderr, "(26) p->right->name:\"%s\"\n", dum_line);
+		parseNegSign(dum_line);
 		p->right = addExpr(p->right, dum_line);
 		fprintf(stderr, "(27) back to p->name:\"%s\"\n", p->name);
 	} else {
@@ -789,23 +806,28 @@ Expr *_distExprLeft2Right(Expr *p, char *prod, char *sum)
 				/* (p->left->name p->op parseExprLeftBy) parseExprOpBy (p->left->name p->op parseExprRightBy) */
 				parseExprLeftBy(left, p->right->name, sum2, block_start, block_end);
 				parseExprRightBy(right, p->right->name, sum2, block_start, block_end);
-				strcpy(dum_line, p->left->name);
+				/* (a + b) * (c + d + e) */
+				strcpy(dum_line, p->left->name);	// a + b
 				if (strcmp(p->left->op, "") != 0)
-					parenthstr(dum_line);
-				strcat(dum_line, p->op);
-				strcat(dum_line, left);
-				parenthstr(dum_line);
-				strcpy(line, dum_line);
+					parenthstr(dum_line);			// (a + b)
+				strcat(dum_line, p->op);			// (a + b) * 
+				if (strcmp(p->right->op, "") != 0)
+					parenthstr(left);
+				strcat(dum_line, left);				// (a + b) * c
+				parenthstr(dum_line);				// ((a+b)*c)
+				strcpy(line, dum_line);				// skipping the space
 
-				strcat(line, sum);
+				strcat(line, sum);					// ((a+b)*c)+
 
-				strcpy(dum_line, p->left->name);
+				strcpy(dum_line, p->left->name);	// a+b
 				if (strcmp(p->left->op, "") != 0)
-					parenthstr(dum_line);
-				strcat(dum_line, p->op);
-				strcat(dum_line, right);
-				parenthstr(dum_line);
-				strcat(line, dum_line);
+					parenthstr(dum_line);			// (a+b)
+				strcat(dum_line, p->op);			// (a+b)*
+				if (strcmp(p->right->op, "") != 0)
+					parenthstr(right);
+				strcat(dum_line, right);			// (a+b)*d+e
+				parenthstr(dum_line);				// ((a+b)*d+e)
+				strcat(line, dum_line);				// ((a+b)*c)+((a+b)*d+e)
 
 				removeExpr(&p);
 				p = addExpr(p, line);
@@ -879,6 +901,9 @@ Expr *_distExprRight2Left(Expr *p, char *prod, char *sum)
 				/* (p->right->name p->op parseExprLeftBy) parseExprOpBy (p->right->name p->op parseExprRightBy) */
 				parseExprLeftBy(left, p->left->name, sum2, block_start, block_end);
 				parseExprRightBy(right, p->left->name, sum2, block_start, block_end);
+				/* (a + b + c) * d */
+				if (strcmp(p->left->op, "") != 0)
+					parenthstr(left);
 				strcpy(line, left);
 				strcat(line, p->op);
 				strcpy(dum_line, p->right->name);
@@ -890,6 +915,8 @@ Expr *_distExprRight2Left(Expr *p, char *prod, char *sum)
 				strcat(line, sum);
 
 				char dum_line2[MAXCHAR] = "";
+				if (strcmp(p->left->op, "") != 0)
+					parenthstr(right);
 				strcpy(dum_line, right);
 				strcat(dum_line, p->op);
 				strcpy(dum_line2, p->right->name);
@@ -1029,7 +1056,10 @@ void testdistExpr(void)
 	//char *line = "(x + y) * z";
 	//char *line = "(2 * ((5 + 6) * z))";
 	//char *line = "a * ((b / d) - (c / d))";
-	char *line = "x * (a * (b - c) / d) / y";
+	//char *line = "x * (a * (b - c) / d) / y";
+	//char *line = "-1 * y * (a * x^2 + b * x^1 + c * x^0)";
+	char *line = "-1 * (a + b + c)";
+	//char *line = "(a + b + c) * -1";
 	Expr *p = NULL;
 
 	p = addExpr(p, line);
