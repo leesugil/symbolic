@@ -44,6 +44,11 @@ int main(int argc, char *argv[])
 		listExpr(expr);
 		printf("---\n");
 
+		expr = calcExpr(expr);
+		printf("calced expr:\n");
+		listExpr(expr);
+		printf("---\n");
+
 		removeExpr(&expr);
 	}
 
