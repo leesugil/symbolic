@@ -9,7 +9,7 @@ Consider the example:
 - c * 1 should be replaced by c
 Also the example:
 a * x^2 + b * x + c
-would not parse as expected:
+would not be parsed as expected but:
 	a
 	x^2 + b * x + c
 

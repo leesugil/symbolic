@@ -115,6 +115,23 @@ static char *operators[] = {
 	NULL
 };
 
+static char *operators1[] = {
+	" + ",
+	" - ",
+	NULL
+};
+
+static char *operators2[] = {
+	" * ",
+	" / ",
+	NULL
+};
+
+static char *operators3[] = {
+	" % ",
+	NULL
+};
+
 /* with ", " as a divider (instead of "; ", for example), non-dividing expressions like f = f(x, y) or v = (1.0, 0.0, 0.0) could be challenging. - future project. maybe just use strstrmaskblk */
 static char *dividers[] = {
 	", ",
@@ -180,7 +197,7 @@ Expr *addExpr(Expr *p, char *name)
 Expr *parseExprs(Expr *p, int *flag);		/* check if it has multiple statements */
 Expr *parseExprDef(Expr *p, int *flag);		/* check if it is a definition statement */
 Expr *parseExprSt(Expr *p, int *flag);	/* check if it is a mathematical statement with LHS and RHS */
-Expr *parseExprReg(Expr *p);					/* regular (x + y) / z */
+Expr *parseExprReg(Expr *p, char **op_list);					/* regular (x + y) / z */
 
 Expr *parseExpr(Expr *p)
 {
@@ -236,7 +253,9 @@ Expr *parseExpr(Expr *p)
 			/* no comparison statements */
 			/* regular math expressions */
 			fprintf(stderr, "%s: (22) no \" == \"-like divider found in \"%s\"\n", prog, p->name);
-			p = parseExprReg(p);
+			p = parseExprReg(p, operators1);
+			p = parseExprReg(p, operators2);
+			p = parseExprReg(p, operators3);
 		}
 	} else {
 		/* p->name == "" */
@@ -371,13 +390,33 @@ Expr *parseExprSt(Expr *p, int *flag)
 	return p;
 }
 /* parseExprReg: parse regular mathematical expressions */
-Expr *parseExprReg(Expr *p)
+// there's gotta be more depth to this algorithm.
+// consider the example:
+// a * x + b * y
+// typing this much is already a huge compromise to users, so don't expect that they'll put
+// (a * x) + (b * y)
+// this is on of the top urgent future updates.
+// a * x + b * y
+//   ^
+//   |
+//   +-- if detected,
+//       look left and right to see if
+//       ...
+// or basically, { +, - } should've been searched first with higher priority, (weaker bond)
+// then { *, /, ^ }.
+// { % } is a special case, i'll have to deal with it later.
+// like a * (b % c) * d + e kind of crazyness.
+//  ==> +, *, % order...
+Expr *parseExprReg(Expr *p, char **op_list)
 {
 	char *prog = "parseExprOp";
 
+	if (strcmp(p->op, "") != 0)
+		return p;
+
 	char dum_line[MAXCHAR] = "";
 
-	parseExprLeftBy(dum_line, p->name, operators, block_start, block_end);
+	parseExprLeftBy(dum_line, p->name, op_list, block_start, block_end);
 	if (dum_line[0] != '\0') {
 		fprintf(stderr, "(23) p->left->name:\"%s\"\n", dum_line);
 		p->left = addExpr(p->left, dum_line);
@@ -389,9 +428,9 @@ Expr *parseExprReg(Expr *p)
 			fprintf(stderr, "%s: p->left->name=\"%s\"\n", prog, p->left->name);
 		}
 	}
-	parseExprOpBy(p->op, p->name, operators, block_start, block_end);
+	parseExprOpBy(p->op, p->name, op_list, block_start, block_end);
 	fprintf(stderr, "(25) p->op:\"%s\"\n", p->op);
-	parseExprRightBy(dum_line, p->name, operators, block_start, block_end);
+	parseExprRightBy(dum_line, p->name, op_list, block_start, block_end);
 	if (dum_line[0] != '\0') {
 		fprintf(stderr, "(26) p->right->name:\"%s\"\n", dum_line);
 		p->right = addExpr(p->right, dum_line);
@@ -1001,7 +1040,7 @@ Expr *calcExpr(Expr *p)
 }
 void testcalcExpr(void)
 {
-	char *line = "(2 * 3) + (4 / 2) - 7";
+	char *line = "2 * 3 + 4 / 2 - 7";
 	Expr *p = NULL;
 
 	p = addExpr(p, line);
@@ -1021,8 +1060,8 @@ Expr *_calcExprMult(Expr *p)
 {
 	char *prog = "_calcExprMult";
 
+	fprintf(stderr, "%s: p->op:%s\n", prog, p->op);
 	if (strcmp(p->op, " * ") == 0) {
-		fprintf(stderr, "%s: p->op:%s\n", prog, p->op);
 		char *leftp = NULL;
 		double left = strtod(p->left->name, &leftp);
 		fprintf(stderr, "%s: leftp:%s\n", prog, leftp);
@@ -1044,8 +1083,8 @@ Expr *_calcExprDiv(Expr *p)
 {
 	char *prog = "_calcExprDiv";
 
+	fprintf(stderr, "%s: p->op:%s\n", prog, p->op);
 	if (strcmp(p->op, " / ") == 0) {
-		fprintf(stderr, "%s: p->op:%s\n", prog, p->op);
 		char *leftp = NULL;
 		double left = strtod(p->left->name, &leftp);
 		fprintf(stderr, "%s: leftp:%s\n", prog, leftp);
@@ -1067,8 +1106,8 @@ Expr *_calcExprAdd(Expr *p)
 {
 	char *prog = "_calcExprAdd";
 
+	fprintf(stderr, "%s: p->op:%s\n", prog, p->op);
 	if (strcmp(p->op, " + ") == 0) {
-		fprintf(stderr, "%s: p->op:%s\n", prog, p->op);
 		char *leftp = NULL;
 		double left = strtod(p->left->name, &leftp);
 		fprintf(stderr, "%s: leftp:%s\n", prog, leftp);
@@ -1090,8 +1129,8 @@ Expr *_calcExprSub(Expr *p)
 {
 	char *prog = "_calcExprSub";
 
+	fprintf(stderr, "%s: p->op:%s\n", prog, p->op);
 	if (strcmp(p->op, " - ") == 0) {
-		fprintf(stderr, "%s: p->op:%s\n", prog, p->op);
 		char *leftp = NULL;
 		double left = strtod(p->left->name, &leftp);
 		fprintf(stderr, "%s: leftp:%s\n", prog, leftp);
