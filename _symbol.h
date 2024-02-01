@@ -10,7 +10,7 @@ typedef struct Symb Symb;
 
 struct Symb {
 	char *name;
-	char formula[MAXCHAR+1];
+	char formula[MAXCHAR];
 	Symb *left;
 	Symb *right;
 };
