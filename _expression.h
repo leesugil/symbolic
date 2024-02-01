@@ -179,8 +179,8 @@ Expr *addExpr(Expr *p, char *name)
 /* input " = " causes error, keep capturing p->left == " = " causing infinite loop */
 Expr *parseExprs(Expr *p, int *flag);		/* check if it has multiple statements */
 Expr *parseExprDef(Expr *p, int *flag);		/* check if it is a definition statement */
-Expr *parseExprComp(Expr *p, int *flag);	/* check if it is a compaison of two statements */
-Expr *parseExprOp(Expr *p);					/* regular */
+Expr *parseExprSt(Expr *p, int *flag);	/* check if it is a mathematical statement with LHS and RHS */
+Expr *parseExprReg(Expr *p);					/* regular (x + y) / z */
 
 Expr *parseExpr(Expr *p)
 {
@@ -230,13 +230,13 @@ Expr *parseExpr(Expr *p)
 			/* no definition statements */
 			/* check LHS, RHS, " == " */
 			fprintf(stderr, "%s: (15) no \" = \"-like divider found in \"%s\"\n", prog, p->name);
-			p = parseExprComp(p, &flag);
+			p = parseExprSt(p, &flag);
 		}
 		if (flag == 1) {
 			/* no comparison statements */
 			/* regular math expressions */
 			fprintf(stderr, "%s: (22) no \" == \"-like divider found in \"%s\"\n", prog, p->name);
-			p = parseExprOp(p);
+			p = parseExprReg(p);
 		}
 	} else {
 		/* p->name == "" */
@@ -333,10 +333,10 @@ Expr *parseExprDef(Expr *p, int *flag)
 
 	return p;
 }
-/* check if it is a compaison of two statements */
-Expr *parseExprComp(Expr *p, int *flag)
+/* check if it is a mathematical statement with LHS and RHS */
+Expr *parseExprSt(Expr *p, int *flag)
 {
-	char *prog = "parseExprComp";
+	char *prog = "parseExprSt";
 
 	char dum_line[MAXCHAR] = "";
 
@@ -370,8 +370,8 @@ Expr *parseExprComp(Expr *p, int *flag)
 
 	return p;
 }
-/* regular */
-Expr *parseExprOp(Expr *p)
+/* parseExprReg: parse regular mathematical expressions */
+Expr *parseExprReg(Expr *p)
 {
 	char *prog = "parseExprOp";
 
@@ -968,5 +968,58 @@ void testdistExpr(void)
 	listExpr(p);
 	printf("---\n");
 }
+
+Expr *calcExpr(Expr *p)
+{
+	char *prog = "calcExpr";
+
+	if (p == NULL)
+		return NULL;
+
+	fprintf(stderr, "%s: (start) p->name:%s\n", prog, p->name);
+
+	fprintf(stderr, "%s: p->name:%s checking left\n", prog, p->name);
+	p->left = calcExpr(p->left);
+	fprintf(stderr, "%s: (pass) p->name:%s checking left\n", prog, p->name);
+	fprintf(stderr, "%s: p->name:%s checking right\n", prog, p->name);
+	p->right = calcExpr(p->right);
+	fprintf(stderr, "%s: (pass) p->name:%s checking right\n", prog, p->name);
+
+	if (strcmp(p->op, " * ") == 0) {
+		fprintf(stderr, "%s: p->op:%s\n", prog, p->op);
+		char *leftp = NULL;
+		double left = strtod(p->left->name, &leftp);
+		fprintf(stderr, "%s: leftp:%s\n", prog, leftp);
+		if (strlen(leftp) == 0) {
+			char *rightp = NULL;
+			double right = strtod(p->right->name, &rightp);
+			fprintf(stderr, "%s: rightp:%s\n", prog, rightp);
+			if (strlen(rightp) == 0) {
+				/* double-to-str */
+				sprintf(p->name, "%g", left * right);
+			}
+		}
+	}
+
+	return p;
+}
+void testcalcExpr(void)
+{
+	char *line = "-1.2 * 3.4e-5";
+	Expr *p = NULL;
+
+	p = addExpr(p, line);
+
+	printf("original\n");
+	listExpr(p);
+	printf("---\n");
+
+	p = calcExpr(p);
+
+	printf("testcalcExpr\n");
+	listExpr(p);
+	printf("---\n");
+}
+
 
 #endif	/* _EXPRESSION_H */
