@@ -620,7 +620,7 @@ void testparseExprRightBy(void)
 
 void displayExprOp(Expr *p)
 {
-	printf("%s\n", p->op);
+	printf("op:\"%s\"\n", p->op);
 }
 
 /* listExpr: in-order print of tree p */
@@ -630,7 +630,7 @@ void listExpr(Expr *p)
 
 	if (p != NULL) {
 		printn("\t", tabs);
-		printf("%s\n", p->name);
+		printf("name:\"%s\"\n", p->name);
 		tabs++;
 		listExpr(p->left);
 		if (strlen(p->op) > 0) {
@@ -650,9 +650,10 @@ void _removeExpr(Expr *p)
 		_removeExpr(p->right);
 		p->left = NULL;
 		p->right = NULL;
-		//free(p->name);	no longer dynamically allocated
-		//free(p->op);		no longer dynamically allocated
-		strcpy(p->name, "deleted");
+		//free(p->name);	//no longer dynamically allocated
+		//free(p->op);		//no longer dynamically allocated
+		strcpy(p->name, "");
+		strcpy(p->op, "");
 		free(p);
 	}
 }
@@ -692,7 +693,8 @@ Expr *evalExpr(Expr *p)
 }
 void testevalExpr(void)
 {
-	char line[MAXCHAR] = "(x + ((x + y) + (y + z)))";
+	//char line[MAXCHAR] = "(x + ((x + y) + (y + z)))";
+	char line[MAXCHAR] = "a * x^2 + b * x^1 + c * x^0";
 	Expr *p = NULL;
 	p = addExpr(p, line);
 	printf("\nevalExpr (before)\n");
@@ -1064,7 +1066,8 @@ Expr *calcExpr(Expr *p)
 }
 void testcalcExpr(void)
 {
-	char *line = "2 * (3^1 % 2) + 4 / 2^2 * x - 7^0";
+	//char *line = "2 * (3^1 % 2) + 4 / 2^2 * x - 7^0";
+	char *line = "a * x^2 + b * x^1 + c * x^0";
 	Expr *p = NULL;
 
 	p = addExpr(p, line);

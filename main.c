@@ -45,11 +45,22 @@ int main(int argc, char *argv[])
 		printf("---\n");
 
 		expr = calcExpr(expr);
-		printf("calced expr:\n");
+		printf("calculated expr:\n");
 		listExpr(expr);
 		printf("---\n");
 
+		printf("expr->name:\n");
+		printf("%s\n", expr->name);
+		printf("---\n");
+
 		removeExpr(&expr);
+		printf("removed expr:\n");
+		listExpr(expr);
+		printf("---\n");
+		printf("symbols:\n");
+		listSymb(symb);
+		printf("---\n");
+		printf("---\n");
 	}
 
 	exit(0);
