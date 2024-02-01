@@ -124,11 +124,11 @@ static char *operators1[] = {
 static char *operators2[] = {
 	" * ",
 	" / ",
-	"^",
 	NULL
 };
 
 static char *operators3[] = {
+	"^",
 	" % ",
 	NULL
 };
@@ -628,10 +628,10 @@ void listExpr(Expr *p)
 		printf("%s\n", p->name);
 		tabs++;
 		listExpr(p->left);
-		//if (strlen(p->op) > 0) {
-		//	printn("\t", tabs);
-		//	displayExprOp(p);
-		//}
+		if (strlen(p->op) > 0) {
+			printn("\t", tabs);
+			displayExprOp(p);
+		}
 		listExpr(p->right);
 		tabs--;
 	}
@@ -1031,7 +1031,7 @@ Expr *calcExpr(Expr *p)
 	p->right = calcExpr(p->right);
 	fprintf(stderr, "%s: (pass) p->name:%s checking right\n", prog, p->name);
 
-	//p = refreshExpr(p);
+	p = refreshExpr(p);
 
 	p = _calcExprMult(p);
 	p = _calcExprDiv(p);
@@ -1043,7 +1043,7 @@ Expr *calcExpr(Expr *p)
 }
 void testcalcExpr(void)
 {
-	char *line = "2 * 3^1 + 4 / 2^2 - 7^0";
+	char *line = "2 * 3^1 + 4 / 2^2 * x - 7^0";
 	Expr *p = NULL;
 
 	p = addExpr(p, line);
@@ -1078,6 +1078,7 @@ Expr *_calcExprMult(Expr *p)
 				/* double-to-str */
 				double output = left * right;
 				sprintf(p->name, "%g", output);
+				p->op[0] = '\0';
 			}
 		}
 	}
@@ -1103,6 +1104,7 @@ Expr *_calcExprDiv(Expr *p)
 				/* double-to-str */
 				double output = left / right;
 				sprintf(p->name, "%g", output);
+				p->op[0] = '\0';
 			}
 		}
 	}
@@ -1128,6 +1130,7 @@ Expr *_calcExprAdd(Expr *p)
 				/* double-to-str */
 				double output = left + right;
 				sprintf(p->name, "%g", output);
+				p->op[0] = '\0';
 			}
 		}
 	}
@@ -1153,6 +1156,7 @@ Expr *_calcExprSub(Expr *p)
 				/* double-to-str */
 				double output = left - right;
 				sprintf(p->name, "%g", output);
+				p->op[0] = '\0';
 			}
 		}
 	}
@@ -1178,6 +1182,7 @@ Expr *_calcExprPow(Expr *p)
 				/* double-to-str */
 				double output = pow(left, right);
 				sprintf(p->name, "%g", output);
+				p->op[0] = '\0';
 			}
 		}
 	}
