@@ -186,6 +186,7 @@ Expr *addExpr(Expr *p, char *name)
 		strcpy(p->name, name);
 		if (p->name[strlen(p->name)-1] == '\n')
 			p->name[strlen(p->name)-1] = '\0';
+		p->op[0] = '\0';
 		p->left = NULL;
 		p->right = NULL;
 
@@ -759,10 +760,12 @@ Expr *_distExprLeft2Right(Expr *p, char *prod, char *sum)
 	if (p == NULL)
 		return NULL;
 
+	/* should i use preorder traversal?
 	if (p->left != NULL)
 		p->left = _distExprLeft2Right(p->left, prod, sum);
 	if (p->right != NULL)
 		p->right = _distExprLeft2Right(p->right, prod, sum);
+	*/
 
 	char line[MAXCHAR] = "";
 	char left[MAXCHAR] = "";
@@ -810,6 +813,11 @@ Expr *_distExprLeft2Right(Expr *p, char *prod, char *sum)
 		}
 	}
 
+	if (p->left != NULL)
+		p->left = _distExprLeft2Right(p->left, prod, sum);
+	if (p->right != NULL)
+		p->right = _distExprLeft2Right(p->right, prod, sum);
+
 	return p;
 }
 void test_distExprLeft2Right(void)
@@ -839,10 +847,12 @@ Expr *_distExprRight2Left(Expr *p, char *prod, char *sum)
 
 	fprintf(stderr, "%s: considering \"%s\"\n", prog, p->name);
 
+	/* should i use preorder tranversal?
 	if (p->left != NULL)
 		p->left = _distExprRight2Left(p->left, prod, sum);
 	if (p->right != NULL)
 		p->right = _distExprRight2Left(p->right, prod, sum);
+	*/
 
 	fprintf(stderr, "%s: back on \"%s\"\n", prog, p->name);
 
@@ -894,6 +904,11 @@ Expr *_distExprRight2Left(Expr *p, char *prod, char *sum)
 			}
 		}
 	}
+
+	if (p->left != NULL)
+		p->left = _distExprRight2Left(p->left, prod, sum);
+	if (p->right != NULL)
+		p->right = _distExprRight2Left(p->right, prod, sum);
 
 	return p;
 }
