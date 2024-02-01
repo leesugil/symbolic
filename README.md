@@ -1,7 +1,23 @@
 # symbolic
 Symbolic calculator for arithmetic operations with fractions
 
-## WIP
+## Update Log
+
+### WIP
+Consider the example:
+f = a * x^2 + b * x^1 + c * x^0
+x = 2
+y = 3
+g = y * f
+==> 3 * a * 4 + 3 * b * 2 + 3 * c * 1
+This happens because I haven't implemented commutative & associative rules.
+Time to implement these properties.
+We'll start with a simple strcmp and switching p->left and p->right.
+Be careful that blindly doing it will make it commutative, not associative.
+converting "y - x" into "-x - y" would not work well if x < 0. <- a mini project first.
+	- the current version takes -x as an independent variable to x. <- another mini objective. if a new symbol starts with '-' but strtod doesn't read anything, then register it as "-1 * rest_of_string".
+
+### WIP (resolved)
 Consider the example:
 (a * (x^2)) + ((b * (x^1)) + (c * (x^0)))
 - x^1 should be replaced by x
@@ -13,7 +29,7 @@ would not be parsed as expected but:
 	a
 	x^2 + b * x + c
 
-## WHERE I TOOK OFF LAST TIME (resolved)
+### WHERE I TOOK OFF LAST TIME (resolved)
 Updating parseExpr to make sure that DEFN_DIV and EQN_DIV are applied first with strstr, and then OP_DIV later with strstrmask with BLOCK_START and BLOCK_END.
 The more I dig into the project, the more I realize that it take a lot of string parsing & editing work. It's not entirely reinventing the wheel because C doesn't assume it understands unspecified arguments as symbols, but the project is taking more time than I expected with the parsing work.
 Also VAR should go back to SYMB. It makes more sense. Every variable is just a map { strings } -> { doubles }, a constant function.
@@ -50,11 +66,11 @@ The project got streched out a little due to the ambitious initial goal, I'm spl
 		2. Actual evaluation.
 			Evaluate numbers, apply symbolic operations if needed
 
-## Updates
+### Updates (no longer maintained)
 - Can accept symbolic variables with/without assigned values.
 - Can display them in a fraction.
 
-## Future Updates
+### Future Updates (no longer maintained)
 - Can display current inputs.
 - Can reduce fractions.
 - Can apply values to variables for computation.
