@@ -723,14 +723,24 @@ Expr *refreshExpr(Expr *p)
 	char dum_line[MAXCHAR] = "";
 
 	strcpy(p->name, p->left->name);
-	if (strcmp(p->left->op, "") != 0)
-		parenthstr(p->name);
+	if (strcmp(p->op, " * ") == 0 ||
+				strcmp(p->op, " / ") == 0 ||
+				strcmp(p->op, " % ") == 0 ||
+				strcmp(p->op, "^") == 0)
+		if (strcmp(p->left->op, " + ") == 0 ||
+				strcmp(p->left->op, " - ") == 0)
+			parenthstr(p->name);
 
 	strcat(p->name, p->op);
 
 	strcpy(dum_line, p->right->name);
-	if (strcmp(p->right->op, "") != 0)
-		parenthstr(dum_line);
+	if (strcmp(p->op, " * ") == 0 ||
+				strcmp(p->op, " / ") == 0 ||
+				strcmp(p->op, " % ") == 0 ||
+				strcmp(p->op, "^") == 0)
+		if (strcmp(p->right->op, " + ") == 0 ||
+				strcmp(p->right->op, " - ") == 0)
+			parenthstr(dum_line);
 	strcat(p->name, dum_line);
 
 	return p;
