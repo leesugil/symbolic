@@ -24,6 +24,7 @@ int main(int argc, char *argv[])
 	expr = updateExpr(expr, symb);
 	expr = evalExpr(expr);
 	expr = distExpr(expr);
+	expr = commExpr(expr);
 	expr = calcExpr(expr);
 	//printf("%s\n", expr->name);
 
@@ -35,6 +36,7 @@ int main(int argc, char *argv[])
 	expr = updateExpr(expr, symb);
 	expr = evalExpr(expr);
 	expr = distExpr(expr);
+	expr = commExpr(expr);
 	expr = calcExpr(expr);
 	//printf("%s\n", expr->name);
 
@@ -46,6 +48,7 @@ int main(int argc, char *argv[])
 	expr = updateExpr(expr, symb);
 	expr = evalExpr(expr);
 	expr = distExpr(expr);
+	expr = commExpr(expr);
 	expr = calcExpr(expr);
 	//printf("%s\n", expr->name);
 
@@ -57,6 +60,7 @@ int main(int argc, char *argv[])
 	expr = updateExpr(expr, symb);
 	expr = evalExpr(expr);
 	expr = distExpr(expr);
+	expr = commExpr(expr);
 	expr = calcExpr(expr);
 	//printf("%s\n", expr->name);
 
@@ -68,6 +72,7 @@ int main(int argc, char *argv[])
 	expr = updateExpr(expr, symb);
 	expr = evalExpr(expr);
 	expr = distExpr(expr);
+	expr = commExpr(expr);
 	expr = calcExpr(expr);
 	//printf("%s\n", expr->name);
 
@@ -79,6 +84,7 @@ int main(int argc, char *argv[])
 	expr = updateExpr(expr, symb);
 	expr = evalExpr(expr);
 	expr = distExpr(expr);
+	expr = commExpr(expr);
 	expr = calcExpr(expr);
 	//printf("%s\n", expr->name);
 
@@ -90,6 +96,7 @@ int main(int argc, char *argv[])
 	expr = updateExpr(expr, symb);
 	expr = evalExpr(expr);
 	expr = distExpr(expr);
+	expr = commExpr(expr);
 	expr = calcExpr(expr);
 	//printf("%s\n", expr->name);
 
@@ -101,6 +108,7 @@ int main(int argc, char *argv[])
 	expr = updateExpr(expr, symb);
 	expr = evalExpr(expr);
 	expr = distExpr(expr);
+	expr = commExpr(expr);
 	expr = calcExpr(expr);
 	//printf("%s\n", expr->name);
 
@@ -125,6 +133,10 @@ int main(int argc, char *argv[])
 	printf("---\n");
 	printf("distributed expr:\n");
 	expr = distExpr(expr);
+	listExpr(expr);
+	printf("---\n");
+	printf("commutated expr:\n");
+	expr = commExpr(expr);
 	listExpr(expr);
 	printf("---\n");
 	printf("calculated expr:\n");
@@ -155,6 +167,10 @@ int main(int argc, char *argv[])
 		printf("---\n");
 		printf("distributed expr:\n");
 		expr = distExpr(expr);
+		listExpr(expr);
+		printf("---\n");
+		printf("commutated expr:\n");
+		expr = commExpr(expr);
 		listExpr(expr);
 		printf("---\n");
 		printf("calculated expr:\n");

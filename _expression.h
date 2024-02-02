@@ -806,7 +806,9 @@ Expr *_distExprLeft2Right(Expr *p, char *prod, char *sum)
 			if (strcmp(p->right->op, sum) == 0) {
 				/* there is an operation in RHS to distribute the primary operation over */
 				/* (p->left->name p->op parseExprLeftBy) parseExprOpBy (p->left->name p->op parseExprRightBy) */
+				// "left" will be the p->right->left->name part
 				parseExprLeftBy(left, p->right->name, sum2, block_start, block_end);
+				// "right" will be the p->right->right->name part
 				parseExprRightBy(right, p->right->name, sum2, block_start, block_end);
 				/* (a + b) * (c + d + e) */
 				strcpy(dum_line, p->left->name);	// a + b
@@ -814,7 +816,7 @@ Expr *_distExprLeft2Right(Expr *p, char *prod, char *sum)
 					parenthstr(dum_line);			// (a + b)
 				strcat(dum_line, p->op);			// (a + b) * 
 				if (strcmp(p->right->op, "") != 0)
-					parenthstr(left);
+					parenthstr(left);				// was this right??
 				strcat(dum_line, left);				// (a + b) * c
 				parenthstr(dum_line);				// ((a+b)*c)
 				strcpy(line, dum_line);				// skipping the space
@@ -900,7 +902,9 @@ Expr *_distExprRight2Left(Expr *p, char *prod, char *sum)
 			if (strcmp(p->left->op, sum) == 0) {
 				/* there is an operation in LHS to distribute the primary operation over */
 				/* (p->right->name p->op parseExprLeftBy) parseExprOpBy (p->right->name p->op parseExprRightBy) */
+				// "left" will be the p->left->left->name part
 				parseExprLeftBy(left, p->left->name, sum2, block_start, block_end);
+				// "right" will be the p->left->right->name part
 				parseExprRightBy(right, p->left->name, sum2, block_start, block_end);
 				/* (a + b + c) * d */
 				if (strcmp(p->left->op, "") != 0)
@@ -1142,17 +1146,19 @@ void testcalcExpr(void)
 	listExpr(p);
 	printf("---\n");
 }
-
 Expr *_calcExprMult(Expr *p)
 {
 	char *prog = "_calcExprMult";
 
 	char *op_name = " * ";
 
+	if (p == NULL)
+		return NULL;
+
 	fprintf(stderr, "%s: p->op:%s\n", prog, p->op);
 	if (strcmp(p->op, op_name) == 0) {
 		char *leftp = NULL;
-		double left = strtod(p->left->name, &leftp);
+		double left = strtod(p->left->name, &leftp);	// p != NULL => p->left != NULL
 		fprintf(stderr, "%s: leftp:%s\n", prog, leftp);
 		if (strlen(leftp) == 0) {
 			char *rightp = NULL;
@@ -1307,6 +1313,70 @@ void refreshExprTree(Expr **p)
 	strcpy(line, (*p)->name);
 	removeExpr(p);
 	*p = addExpr(*p, line);
+}
+
+/* commExpr: would eventually handle all the commutative work.
+ * current version requires distExpr running ahead of this */
+// 3 * c * 4 * b * 5 ==> 3 * 4 * 5 * b * c
+// 3 * c * 4 * (5 * b)		easy
+// 3 * c * (4 * (5 * b))	nothing
+// 3 * ((4 * (5 * b)) * c)	easy
+// is_pure_number(right) == 1 ==> switch
+// is_pure_number(left) == 0 ==> switch
+Expr *commExpr(Expr *p)
+{
+	char *prog = "commExpr";
+
+	if (p == NULL)
+		return NULL;
+
+	fprintf(stderr, "%s: considering \"%s\"\n", prog, p->name);
+
+	// postorder traversal
+	if (p->left != NULL)
+		p->left = commExpr(p->left);
+	if (p->right != NULL)
+		p->right = commExpr(p->right);
+
+	fprintf(stderr, "%s: back on \"%s\"\n", prog, p->name);
+
+	// refresh node to update name
+	p = refreshExpr(p);
+
+	// postorder traversal work
+	if (strcmp(p->op, " * ") == 0) {
+		if (p->left != NULL && p->right != NULL) {
+			if (is_pure_number(p->right->name, NULL) == 1 ||
+					is_pure_number(p->left->name, NULL) == 0) {
+				/* switch */
+				Expr *q = p->left;
+				p->left = p->right;
+				p->right = q;
+				p = refreshExpr(p);
+			}
+		}
+	}
+
+	return p;
+}
+void testcommExpr(void)
+{
+	//char *line = "((x + y) * z) * ((a + b) * c)";
+	//char *line = "3 * a * 4 * b + c * 5 * d * 7";
+	char *line = "3 * a * 4 * b / c * 5 * d * 7";
+	Expr *p = NULL;
+
+	p = addExpr(p, line);
+
+	printf("original\n");
+	listExpr(p);
+	printf("---\n");
+
+	p = commExpr(p);
+
+	printf("testcommExpr\n");
+	listExpr(p);
+	printf("---\n");
 }
 
 #endif	/* _EXPRESSION_H */
