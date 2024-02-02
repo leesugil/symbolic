@@ -18,14 +18,17 @@ int main(int argc, char *argv[])
 
 	/* one cycle */
 	removeExpr(&expr);
-	line = "f = a * x^2 + b * x^1 + c * x^0, "
+	/*line = "f = a * x^2 + b * x^1 + c * x^0, "
 			"g = y * f, "
 			"h = g * z, "
 			"i = -1 * h, "
 			"j = i * -1, "
 			"x = 2, "
 			"y = 3, "
-			"z = 7";
+			"z = 7";*/
+	line = "f = (a - b) * c, "
+		"a = 1, "
+		"b = 1";
 	expr = addExpr(expr, line);
 	symb = updateSymb(symb, expr);
 	expr = updateExpr(expr, symb);
