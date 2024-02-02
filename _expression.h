@@ -1368,7 +1368,8 @@ void testcommExpr(void)
 {
 	//char *line = "((x + y) * z) * ((a + b) * c)";
 	//char *line = "3 * a * 4 * b + c * 5 * d * 7";
-	char *line = "3 * a * 4 * b / c * 5 * d * 7";
+	//char *line = "3 * a * 4 * b / c * 5 * d * 7";
+	char *line = "-1 * a * b * -1";
 	Expr *p = NULL;
 
 	p = addExpr(p, line);
