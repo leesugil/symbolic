@@ -1132,7 +1132,8 @@ void testcalcExpr(void)
 	//char *line = "-1 * 3 * a * 4 * 7 * -1";
 	//char *line = "-1 * 3 * a * 4 * 7 * -1 + -1 * 3 * b * 2 * 7 * -1";
 	//char *line = "-1 * 3 * a * 2^2 * 7 * -1";
-	char *line = "-2 * (a + b) * -1";
+	//char *line = "-2 * (a + b) * -1";
+	char *line = "-1 * 2 * 3^2 * 4";
 	Expr *p = NULL;
 
 	p = addExpr(p, line);
@@ -1160,12 +1161,50 @@ Expr *_calcExprMult(Expr *p)
 	if (p == NULL)
 		return NULL;
 
+	//fprintf(stdout, "%s: p->name:%s\n", prog, p->name);
+	//fprintf(stdout, "%s: p->op:%s\n", prog, p->op);
+
+	if (strcmp(p->op, op_name) == 0) {
+		fprintf(stdout, "%s: p->name:%s\n", prog, p->name);
+		fprintf(stdout, "%s: p->right->op:%s\n", prog, p->right->op);
+		// after commExpr, p->left must be a number with p->op == *
+		if (is_pure_number(p->left->name, NULL) == 1) {		// number
+			int c = is_pure_number(p->right->name, NULL);
+			char *q = NULL;
+			double value = strtod(p->right->name, &q);
+			if (c == 1) {	// number
+				sprintf(p->name, "%g", strtod(p->left->name, NULL) * value);
+				fprintf(stdout, "%s: returning \"%s\"\n", prog, p->name);
+				return p;
+			} else if (c == 2) {	// mixed
+				if (strcmp(p->right->op, op_name) == 0) {
+					sprintf(p->name, "%g", strtod(p->left->name, NULL) * value);
+					// p->op == p->right->op == " * "
+					strcat(p->name, q);
+					fprintf(stdout, "%s: returning \"%s\"\n", prog, p->name);
+					return p;
+				}
+			}
+		}
+	}
+
+	return p;
+}
+Expr *_calcExprMult2(Expr *p)
+{
+	char *prog = "_calcExprMult";
+
+	char *op_name = " * ";
+
+	if (p == NULL)
+		return NULL;
+
 	fprintf(stderr, "%s: p->op:%s\n", prog, p->op);
 	if (strcmp(p->op, op_name) == 0) {
 		char *leftp = NULL;
 		double left = strtod(p->left->name, &leftp);	// p != NULL => p->left != NULL
 		fprintf(stderr, "%s: leftp:%s\n", prog, leftp);
-		if (strlen(leftp) == 0) {
+		if (strlen(leftp) == 0) {			// p->left is a number
 			char *rightp = NULL;
 			double right = strtod(p->right->name, &rightp);
 			fprintf(stderr, "%s: rightp:%s\n", prog, rightp);
