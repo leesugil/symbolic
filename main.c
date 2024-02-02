@@ -18,91 +18,14 @@ int main(int argc, char *argv[])
 
 	/* one cycle */
 	removeExpr(&expr);
-	line = "f = a * x^2 + b * x^1 + c * x^0";
-	expr = addExpr(expr, line);
-	symb = updateSymb(symb, expr);
-	expr = updateExpr(expr, symb);
-	expr = evalExpr(expr);
-	expr = distExpr(expr);
-	expr = commExpr(expr);
-	expr = calcExpr(expr);
-	//printf("%s\n", expr->name);
-
-	/* one cycle */
-	removeExpr(&expr);
-	line = "g = y * f";
-	expr = addExpr(expr, line);
-	symb = updateSymb(symb, expr);
-	expr = updateExpr(expr, symb);
-	expr = evalExpr(expr);
-	expr = distExpr(expr);
-	expr = commExpr(expr);
-	expr = calcExpr(expr);
-	//printf("%s\n", expr->name);
-
-	/* one cycle */
-	removeExpr(&expr);
-	line = "h = g * z";
-	expr = addExpr(expr, line);
-	symb = updateSymb(symb, expr);
-	expr = updateExpr(expr, symb);
-	expr = evalExpr(expr);
-	expr = distExpr(expr);
-	expr = commExpr(expr);
-	expr = calcExpr(expr);
-	//printf("%s\n", expr->name);
-
-	/* one cycle */
-	removeExpr(&expr);
-	line = "i = -1 * h";
-	expr = addExpr(expr, line);
-	symb = updateSymb(symb, expr);
-	expr = updateExpr(expr, symb);
-	expr = evalExpr(expr);
-	expr = distExpr(expr);
-	expr = commExpr(expr);
-	expr = calcExpr(expr);
-	//printf("%s\n", expr->name);
-
-	/* one cycle */
-	removeExpr(&expr);
-	line = "j = i * -1";
-	expr = addExpr(expr, line);
-	symb = updateSymb(symb, expr);
-	expr = updateExpr(expr, symb);
-	expr = evalExpr(expr);
-	expr = distExpr(expr);
-	expr = commExpr(expr);
-	expr = calcExpr(expr);
-	//printf("%s\n", expr->name);
-
-	/* one cycle */
-	removeExpr(&expr);
-	line = "x = 2";
-	expr = addExpr(expr, line);
-	symb = updateSymb(symb, expr);
-	expr = updateExpr(expr, symb);
-	expr = evalExpr(expr);
-	expr = distExpr(expr);
-	expr = commExpr(expr);
-	expr = calcExpr(expr);
-	//printf("%s\n", expr->name);
-
-	/* one cycle */
-	removeExpr(&expr);
-	line = "y = 3";
-	expr = addExpr(expr, line);
-	symb = updateSymb(symb, expr);
-	expr = updateExpr(expr, symb);
-	expr = evalExpr(expr);
-	expr = distExpr(expr);
-	expr = commExpr(expr);
-	expr = calcExpr(expr);
-	//printf("%s\n", expr->name);
-
-	/* one cycle */
-	removeExpr(&expr);
-	line = "z = 7";
+	line = "f = a * x^2 + b * x^1 + c * x^0, "
+			"g = y * f, "
+			"h = g * z, "
+			"i = -1 * h, "
+			"j = i * -1, "
+			"x = 2, "
+			"y = 3, "
+			"z = 7";
 	expr = addExpr(expr, line);
 	symb = updateSymb(symb, expr);
 	expr = updateExpr(expr, symb);

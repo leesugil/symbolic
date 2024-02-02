@@ -1161,12 +1161,12 @@ Expr *_calcExprMult(Expr *p)
 	if (p == NULL)
 		return NULL;
 
-	//fprintf(stdout, "%s: p->name:%s\n", prog, p->name);
-	//fprintf(stdout, "%s: p->op:%s\n", prog, p->op);
+	//fprintf(stderr, "%s: p->name:%s\n", prog, p->name);
+	//fprintf(stderr, "%s: p->op:%s\n", prog, p->op);
 
 	if (strcmp(p->op, op_name) == 0) {
-		fprintf(stdout, "%s: p->name:%s\n", prog, p->name);
-		fprintf(stdout, "%s: p->right->op:%s\n", prog, p->right->op);
+		fprintf(stderr, "%s: p->name:%s\n", prog, p->name);
+		fprintf(stderr, "%s: p->right->op:%s\n", prog, p->right->op);
 		// after commExpr, p->left must be a number with p->op == *
 		if (is_pure_number(p->left->name, NULL) == 1) {		// number
 			int c = is_pure_number(p->right->name, NULL);
@@ -1174,14 +1174,14 @@ Expr *_calcExprMult(Expr *p)
 			double value = strtod(p->right->name, &q);
 			if (c == 1) {	// number
 				sprintf(p->name, "%g", strtod(p->left->name, NULL) * value);
-				fprintf(stdout, "%s: returning \"%s\"\n", prog, p->name);
+				fprintf(stderr, "%s: returning \"%s\"\n", prog, p->name);
 				return p;
 			} else if (c == 2) {	// mixed
 				if (strcmp(p->right->op, op_name) == 0) {
 					sprintf(p->name, "%g", strtod(p->left->name, NULL) * value);
 					// p->op == p->right->op == " * "
 					strcat(p->name, q);
-					fprintf(stdout, "%s: returning \"%s\"\n", prog, p->name);
+					fprintf(stderr, "%s: returning \"%s\"\n", prog, p->name);
 					return p;
 				}
 			}
