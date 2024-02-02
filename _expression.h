@@ -122,17 +122,21 @@ static char *operators1[] = {
 };
 
 static char *operators2[] = {
-	" * ",
 	" / ",
 	NULL
 };
 
 static char *operators3[] = {
-	" % ",
+	" * ",
 	NULL
 };
 
 static char *operators4[] = {
+	" % ",
+	NULL
+};
+
+static char *operators5[] = {
 	"^",
 	NULL
 };
@@ -268,6 +272,7 @@ Expr *parseExpr(Expr *p)
 			p = parseExprReg(p, operators2);
 			p = parseExprReg(p, operators3);
 			p = parseExprReg(p, operators4);
+			p = parseExprReg(p, operators5);
 		}
 	} else {
 		/* p->name == "" */
