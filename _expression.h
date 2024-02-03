@@ -7,6 +7,8 @@
 #include <ctype.h>
 #include "qol/c/getword.h"
 
+#include "operation.h"
+
 /* Expression
  * +-----------------------------------+
  * | Divider(Expression1, Expression2) |
@@ -1367,28 +1369,37 @@ void refreshExprTree(Expr **p)
 // 3 * ((4 * (5 * b)) * c)	easy
 // is_pure_number(right) == 1 ==> switch
 // is_pure_number(left) == 0 ==> switch
-Expr *commExpr(Expr *p)
+Expr *_commExpr(Expr *p, char *op, char *inv)
 {
-	char *prog = "commExpr";
+	char *prog = "_commExpr";
 
 	if (p == NULL)
 		return NULL;
 
-	fprintf(stderr, "%s: considering \"%s\"\n", prog, p->name);
+	fprintf(stderr, "%s: considering \"%s\" \"%s\"\n", prog, op, p->name);
 
 	// postorder traversal
 	if (p->left != NULL)
-		p->left = commExpr(p->left);
+		p->left = _commExpr(p->left, op);
 	if (p->right != NULL)
-		p->right = commExpr(p->right);
+		p->right = _commExpr(p->right, op);
 
-	fprintf(stderr, "%s: back on \"%s\"\n", prog, p->name);
+	fprintf(stderr, "%s: back on \"%s\" \"%s\"\n", prog, op, p->name);
 
 	// refresh node to update name
 	p = refreshExpr(p);
 
 	// postorder traversal work
-	if (strcmp(p->op, " * ") == 0) {
+	if (strcmp(p->op, inv) == 0) {
+		if (p->left != NULL && p->right != NULL) {
+			if (is_pure_number(p->right->name)) {
+				/* switch with inverse */
+				// how do i apply * -1 with the " - "-information only?
+				// maybe it's really time to implement op as a structure...
+			}
+		}
+	}
+	if (strcmp(p->op, op) == 0) {
 		if (p->left != NULL && p->right != NULL) {
 			if (is_pure_number(p->right->name, NULL) == 1 ||
 					is_pure_number(p->left->name, NULL) == 0) {
@@ -1403,12 +1414,28 @@ Expr *commExpr(Expr *p)
 
 	return p;
 }
+Expr *commExpr(Expr *p)
+{
+	char *prog = "commExpr";
+
+	if (p == NULL)
+		return NULL;
+
+	fprintf(stderr, "%s: considering \"%s\"\n", prog, p->name);
+
+	p = _commExpr(p, " * ");
+	p = _commExpr(p, " + ");
+
+	return p;
+}
 void testcommExpr(void)
 {
 	//char *line = "((x + y) * z) * ((a + b) * c)";
 	//char *line = "3 * a * 4 * b + c * 5 * d * 7";
 	//char *line = "3 * a * 4 * b / c * 5 * d * 7";
-	char *line = "-1 * a * b * -1";
+	//char *line = "-1 * a * b * -1";
+	//char *line = "1 + x * 2 * y - 1";
+	char *line = "1 + x + -1";
 	Expr *p = NULL;
 
 	p = addExpr(p, line);
