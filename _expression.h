@@ -93,14 +93,14 @@
  *                                       +---+
  */
 
-static char *block_start[] = {
+char *block_start[] = {
 	"(",
 	"[",
 	"{",
 	NULL
 };
 
-static char *block_end[] = {
+char *block_end[] = {
 	")",
 	"]",
 	"}",
@@ -1369,7 +1369,7 @@ void refreshExprTree(Expr **p)
 // 3 * ((4 * (5 * b)) * c)	easy
 // is_pure_number(right) == 1 ==> switch
 // is_pure_number(left) == 0 ==> switch
-Expr *_commExpr(Expr *p, char *op, char *inv)
+Expr *_commExpr(Expr *p, char *op)
 {
 	char *prog = "_commExpr";
 
@@ -1390,15 +1390,6 @@ Expr *_commExpr(Expr *p, char *op, char *inv)
 	p = refreshExpr(p);
 
 	// postorder traversal work
-	if (strcmp(p->op, inv) == 0) {
-		if (p->left != NULL && p->right != NULL) {
-			if (is_pure_number(p->right->name)) {
-				/* switch with inverse */
-				// how do i apply * -1 with the " - "-information only?
-				// maybe it's really time to implement op as a structure...
-			}
-		}
-	}
 	if (strcmp(p->op, op) == 0) {
 		if (p->left != NULL && p->right != NULL) {
 			if (is_pure_number(p->right->name, NULL) == 1 ||
