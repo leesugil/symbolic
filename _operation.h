@@ -82,7 +82,7 @@ Op *addOp(Op *p, Op op)
 
 		p->left = NULL;
 		p->right = NULL;
-	} else if ((cond = strcmp(p->name, op.name)) == 0)
+	} else if ((cond = strcmp(op.name, p->name)) == 0)
 		;
 	else if (cond < 0)
 		p->left = addOp(p->left, op);
@@ -118,9 +118,9 @@ Op *getOp(Op *p, char *name)
 	if (p == NULL) {
 		return NULL;
 	}
-	else if ((cond = strcmp(name, p->name)) == 0)
+	else if ((cond = strcmp(name, p->name)) == 0) {
 		return p;
-	else if (cond < 0) {
+	} else if (cond < 0) {
 		return getOp(p->left, name);
 	} else {
 		return getOp(p->right, name);
@@ -220,9 +220,8 @@ void left2rightAssocCharFunction(char w[], char *left, char *c, char *op)
 	char dum_line[MAXCHAR] = "";
 	strcpy(dum_line, left);
 	int index = 0;
-	if (!is_blocked_properly_blk(dum_line, block_start, block_end, &index)) {
+	if (!is_blocked_properly_blk(dum_line, block_start, block_end, &index))
 		return;
-	}
 	while (is_outer_blocked_blk(dum_line, block_start, block_end, &index)) {
 		remove_outer_block(dum_line, block_start[index], block_end[index]);
 	}
@@ -254,8 +253,8 @@ void right2leftAssocCharFunction(char w[], char *a, char *right, char *op)
 	char b[MAXCHAR] = "";
 	char c[MAXCHAR] = "";
 	char *op_list[] = { op, NULL };
-	parseExprLeftBy(a, dum_line, op_list, block_start, block_end);
-	parseExprRightBy(b, dum_line, op_list, block_start, block_end);
+	parseExprLeftBy(b, dum_line, op_list, block_start, block_end);
+	parseExprRightBy(c, dum_line, op_list, block_start, block_end);
 
 	sprintf(w, "(%s%s%s)%s%s", a, op, b, op, c);
 }
@@ -306,6 +305,10 @@ void charSubtract(char w[], char *x, char *y)
 {
 	binaryCharFunction(w, x, y, " - ");
 }
+void charSubtractLeftAssoc(char w[], char *a, char *b, char *c)
+{
+	leftAssocCharFunction(w, a, b, c, " - ");
+}
 
 
 
@@ -333,6 +336,14 @@ void charMultiplyRightAssoc(char w[], char *a, char *b, char *c)
 {
 	rightAssocCharFunction(w, a, b, c, " * ");
 }
+void left2rightAssocMultiply(char w[], char *left, char *c)
+{
+	left2rightAssocCharFunction(w, left, c, " * ");
+}
+void right2leftAssocMultiply(char w[], char *a, char *right)
+{
+	right2leftAssocCharFunction(w, a, right, " * ");
+}
 
 double divide(double x, double y)
 {
@@ -342,6 +353,162 @@ void charDivide(char w[], char *x, char *y)
 {
 	binaryCharFunction(w, x, y, " / ");
 }
+void charDivideLeftAssoc(char w[], char *a, char *b, char *c)
+{
+	leftAssocCharFunction(w, a, b, c, " / ");
+}
+
+
+
+
+
+
+
+
+
+
+/* run this at the beginning of the main code to load up the operation tree */
+Op *loadOps(Op *p)
+{
+	/***************************
+	 * addition and subtrction
+	 * *************************/
+	Op addition;
+	Op subtraction;
+
+	addition.name = " + ";
+	addition.short_name = "+";
+	addition.f = add;
+	addition.char_f = charAdd;
+	addition.inverse = &subtraction;
+	addition.left_dist_over[0] = NULL;
+	addition.right_dist_over[0] = NULL;
+	addition.char_left_assoc_f = charAddLeftAssoc;
+	addition.char_right_assoc_f = charAddRightAssoc;
+	addition.char_left2right_assoc_f = left2rightAssocAdd;
+	addition.char_right2left_assoc_f = right2leftAssocAdd;
+	addition.char_comm_f = charAddComm;
+	addition.right_unit = "0";
+	addition.left_unit = "0";
+
+	subtraction.name = " - ";
+	subtraction.short_name = "-";
+	subtraction.f = subtract;
+	subtraction.char_f = charSubtract;
+	subtraction.inverse = &addition;
+	subtraction.left_dist_over[0] = NULL;
+	subtraction.right_dist_over[0] = NULL;
+	subtraction.char_left_assoc_f = charSubtractLeftAssoc;
+	subtraction.char_right_assoc_f = NULL;
+	subtraction.char_left2right_assoc_f = NULL;
+	subtraction.char_right2left_assoc_f = NULL;
+	subtraction.char_comm_f = NULL;
+	subtraction.right_unit = "0";
+	subtraction.left_unit = "";
+
+
+	/***************************
+	 * multiplication and division
+	 * *************************/
+	Op multiplication;
+	Op division;
+
+	multiplication.name = " * ";
+	multiplication.short_name = "*";
+	multiplication.f = multiply;
+	multiplication.char_f = charMultiply;
+	multiplication.inverse = &division;
+	multiplication.left_dist_over[0] = " + ";
+	multiplication.left_dist_over[1] = " - ";
+	multiplication.left_dist_over[2] = NULL;
+	multiplication.right_dist_over[0] = " + ";
+	multiplication.right_dist_over[1] = " - ";
+	multiplication.right_dist_over[2] = NULL;
+	multiplication.char_left_assoc_f = charMultiplyLeftAssoc;
+	multiplication.char_right_assoc_f = charMultiplyRightAssoc;
+	multiplication.char_left2right_assoc_f = left2rightAssocMultiply;
+	multiplication.char_right2left_assoc_f = right2leftAssocMultiply;
+	multiplication.char_comm_f = charMultiplyComm;
+	multiplication.right_unit = "1";
+	multiplication.left_unit = "1";
+
+	division.name = " / ";
+	division.short_name = "/";
+	division.f = divide;
+	division.char_f = charDivide;
+	division.inverse = &multiplication;
+	division.left_dist_over[0] = NULL;		// a / (b + c) != a / b + a / c
+	division.right_dist_over[0] = " + ";
+	division.right_dist_over[1] = " - ";
+	division.right_dist_over[2] = NULL;
+	division.char_left_assoc_f = charDivideLeftAssoc;
+	division.char_right_assoc_f = NULL;
+	division.char_left2right_assoc_f = NULL;
+	division.char_right2left_assoc_f = NULL;
+	division.char_comm_f = NULL;
+	division.right_unit = "1";
+	division.left_unit = "";
+
+	p = addOp(p, addition);
+	p = addOp(p, subtraction);
+	p = addOp(p, multiplication);
+	p = addOp(p, division);
+	
+	return p;
+}
+void testloadOps(void)
+{
+	Op *p = NULL;
+	
+	p = loadOps(p);
+
+	listOp(p);
+
+	char w[MAXCHAR] = "";
+	char *a = "a";
+	char *b = "b";
+	char *c = "c";
+	Op *q = NULL;
+
+	q = getOp(p, " + ");
+	q->char_f(w, a, b);
+	printf("%s\n", w);
+	q->char_left_assoc_f(w, a, b, c);
+	printf("%s\n", w);
+	q->char_right_assoc_f(w, a, b, c);
+	printf("%s\n", w);
+	q->char_left2right_assoc_f(w, "(a + b)", c);
+	printf("%s\n", w);
+	q->char_right2left_assoc_f(w, a, "(b + c)");
+	printf("%s\n", w);
+
+	q = getOp(p, " - ");
+	q->char_f(w, a, b);
+	printf("%s\n", w);
+	q->char_left_assoc_f(w, a, b, c);
+	printf("%s\n", w);
+
+	q = getOp(p, " * ");
+	q->char_f(w, a, b);
+	printf("%s\n", w);
+	q->char_left_assoc_f(w, a, b, c);
+	printf("%s\n", w);
+	q->char_right_assoc_f(w, a, b, c);
+	printf("%s\n", w);
+	q->char_left2right_assoc_f(w, "(a * b)", c);
+	printf("%s\n", w);
+	q->char_right2left_assoc_f(w, a, "(b * c)");
+	printf("%s\n", w);
+
+	q = getOp(p, " / ");
+	q->char_f(w, a, b);
+	printf("%s\n", w);
+	q->char_left_assoc_f(w, a, b, c);
+	printf("%s\n", w);
+}
+
+
+
 
 
 
