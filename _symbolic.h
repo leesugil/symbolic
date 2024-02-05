@@ -127,7 +127,7 @@ void testupdateExpr(void)
 	listExpr(p);
 }
 
-void testevalExpr2(void)
+void testrefreshExpr2(void)
 {
 	Symb *root = NULL;
 	Expr *p = NULL;
@@ -150,7 +150,7 @@ void testevalExpr2(void)
 	printf("\nmath expression (after)\n");
 	listExpr(p);
 
-	p = evalExpr(p);
+	p = refreshExpr(p);
 	printf("\nevaluated math expression (after)\n");
 	listExpr(p);
 }

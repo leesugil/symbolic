@@ -26,7 +26,7 @@ struct Op {
 	char *name;							// like " + "
 	char *short_name;					// like "+"
 	BinaryFunctionPointer f;			// like add(x, y)
-	BinaryCharFunctionPointer char_f;	// like charadd(w, x, y)
+	BinaryCharFunctionPointer char_f;	// like charAdd(w, x, y)
 	Op *inverse;					// inverse operation
 	char *left_dist_over[MAXCHAR];				// { " + ", NULL }
 	char *right_dist_over[MAXCHAR];				// (a + b) * c = a * c + b * c
@@ -205,8 +205,8 @@ void binaryCharFunction(char w[], char *x, char *y, char *bop)
 	while (is_outer_blocked_blk(y1, block_start, block_end, NULL))
 		remove_outer_block_blk(y1, block_start, block_end);
 
-	parenthstr(x1);
-	parenthstr(y1);
+	//parenthstr(x1);
+	//parenthstr(y1);
 	w[0] = '\0';
 	strcpy(w, x1);
 	strcat(w, bop);
