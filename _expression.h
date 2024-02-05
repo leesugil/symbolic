@@ -724,7 +724,7 @@ Expr *_distExpr(Expr *p)
 Expr *distExpr(Expr *p)
 {
 	p = _distExpr(p);
-	//p = refreshExpr(p);
+	p = refreshExpr(p);
 
 	return p;
 }
