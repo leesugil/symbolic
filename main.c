@@ -12,6 +12,8 @@
 
 int main(int argc, char *argv[])
 {
+	op_tree = loadOps(op_tree);
+
 	char *line = NULL;
 	Symb *symb = NULL;
 	Expr *expr = NULL;
@@ -26,16 +28,20 @@ int main(int argc, char *argv[])
 			"x = 2, "
 			"y = 3, "
 			"z = 7";*/
+	/*
 	line = "f = (a - b) * c, "
 		"a = 1, "
 		"b = 1";
+	*/
+	line = "f = (x * y)^a - (x / y)^b";
 	expr = addExpr(expr, line);
 	symb = updateSymb(symb, expr);
 	expr = updateExpr(expr, symb);
-	expr = evalExpr(expr);
+	//expr = evalExpr(expr);
+	expr = altExpr(expr);
 	expr = distExpr(expr);
-	expr = commExpr(expr);
-	expr = calcExpr(expr);
+	//expr = commExpr(expr);
+	//expr = calcExpr(expr);
 	//printf("%s\n", expr->name);
 
 	/* one cycle */
@@ -53,23 +59,33 @@ int main(int argc, char *argv[])
 	expr = updateExpr(expr, symb);
 	listExpr(expr);
 	printf("---\n");
+	/*
 	printf("evaluated expr:\n");
 	expr = evalExpr(expr);
+	listExpr(expr);
+	printf("---\n");
+	*/
+	printf("alternate expr:\n");
+	expr = altExpr(expr);
 	listExpr(expr);
 	printf("---\n");
 	printf("distributed expr:\n");
 	expr = distExpr(expr);
 	listExpr(expr);
 	printf("---\n");
+	/*
 	printf("commutated expr:\n");
 	expr = commExpr(expr);
 	listExpr(expr);
 	printf("---\n");
+	*/
+	/*
 	printf("calculated expr:\n");
 	expr = calcExpr(expr);
 	listExpr(expr);
 	printf("---\n");
 	printf("%s\n", expr->name);
+	*/
 
 	line = NULL;
 	size_t maxline = 0;
@@ -87,26 +103,33 @@ int main(int argc, char *argv[])
 		expr = updateExpr(expr, symb);
 		listExpr(expr);
 		printf("---\n");
+		/*
 		printf("evaluated expr:\n");
 		expr = evalExpr(expr);
+		listExpr(expr);
+		printf("---\n");
+		*/
+		printf("alternate expr:\n");
+		expr = altExpr(expr);
 		listExpr(expr);
 		printf("---\n");
 		printf("distributed expr:\n");
 		expr = distExpr(expr);
 		listExpr(expr);
 		printf("---\n");
+		/*
 		printf("commutated expr:\n");
 		expr = commExpr(expr);
 		listExpr(expr);
 		printf("---\n");
+		*/
+		/*
 		printf("calculated expr:\n");
 		expr = calcExpr(expr);
 		listExpr(expr);
 		printf("---\n");
 		printf("%s\n", expr->name);
-		printf("symbols:\n");
-		listSymb(symb);
-		printf("---\n");
+		*/
 	}
 
 	exit(0);

@@ -539,25 +539,6 @@ Expr *refreshExprNode(Expr *p)
 	if (strcmp(p->op, "") == 0)
 		return p;
 
-	/* legacy
-	Op *op = getOp(op_tree, p->op);
-	int l = -1, r = -1;
-	if (op->right_dist_over[0] != NULL) {
-		for (int i = 0; op->right_dist_over[i] != NULL; i++)
-			if (strcmp(p->left->op, op->right_dist_over[i]) == 0) {
-				l = i;
-				break;
-			}
-	}
-	if (op->left_dist_over[0] != NULL) {
-		for (int i = 0; op->left_dist_over[i] != NULL; i++)
-			if (strcmp(p->right->op, op->left_dist_over[i]) == 0) {
-				r = i;
-				break;
-			}
-	}
-	*/
-
 	char line[MAXCHAR] = "";
 	strcpy(line, p->left->name);
 	if (strlen(p->left->op) > 0)
@@ -571,6 +552,69 @@ Expr *refreshExprNode(Expr *p)
 
 	return p;
 }
+
+/* altExpr: x - y => x + -1 * y, etc. */
+Expr *_altExpr(Expr *p)
+{
+	char *prog = "_altExpr";
+
+	if (p->left == NULL || p-> right == NULL)
+		return p;
+
+	if (strcmp(p->op, "") == 0)
+		return p;
+
+	Op *op = getOp(op_tree, p->op);
+	if (op->char_f_alt != NULL) {
+		char left[MAXCHAR] = "";
+		char right[MAXCHAR] = "";
+		strcpy(left, p->left->name);
+		if (strlen(p->left->op) > 0)
+			parenthstr(left);
+		strcpy(right, p->right->name);
+		if (strlen(p->right->op) > 0)
+			parenthstr(right);
+		char line[MAXCHAR] = "";
+		op->char_f_alt(line, left, right);
+
+		removeExpr(&p);
+		p = addExpr(p, line);
+	}
+
+	p->left = _altExpr(p->left);
+	p->right = _altExpr(p->right);
+
+	return p;
+}
+Expr *altExpr(Expr *p)
+{
+	p = _altExpr(p);
+	p = refreshExpr(p);
+
+	return p;
+}
+void testaltExpr(void)
+{
+	//char *line = "(a - b) * (x - y)";
+	//char *line = "(a - b) * (x - y) - x / (y - z)";
+	char *line = "(x * y)^a - (x / y)^b";
+	Expr *p = NULL;
+	op_tree = loadOps(op_tree);
+
+	p = addExpr(p, line);
+
+	printf("original\n");
+	listExpr(p);
+	printf("---\n");
+
+	printf("testaltExpr\n");
+	p = altExpr(p);
+	listExpr(p);
+	printf("---\n");
+}
+
+
+
 
 Expr *_distExpr(Expr *p)
 {
@@ -633,6 +677,10 @@ Expr *_distExpr(Expr *p)
 		parseExprLeft(left_left, p->left->name, op_left, block_start, block_end);
 		char left_right[MAXCHAR] = "";
 		parseExprRight(left_right, p->left->name, op_left, block_start, block_end);
+		if (strlen(p->left->op) > 0) {
+			parenthstr(left_left);
+			parenthstr(left_right);
+		}
 		op->char_f(x, left_left, right);
 		op->char_f(y, left_right, right);
 		op_left->char_f(line, x, y);
@@ -654,6 +702,10 @@ Expr *_distExpr(Expr *p)
 		parseExprLeft(right_left, p->right->name, op_right, block_start, block_end);
 		char right_right[MAXCHAR] = "";
 		parseExprRight(right_right, p->right->name, op_right, block_start, block_end);
+		if (strlen(p->right->op) > 0) {
+			parenthstr(right_left);
+			parenthstr(right_right);
+		}
 		op->char_f(x, left, right_left);
 		op->char_f(y, left, right_right);
 		op_right->char_f(line, x, y);
@@ -672,7 +724,7 @@ Expr *_distExpr(Expr *p)
 Expr *distExpr(Expr *p)
 {
 	p = _distExpr(p);
-	p = refreshExpr(p);
+	//p = refreshExpr(p);
 
 	return p;
 }
@@ -687,7 +739,10 @@ void testdistExpr(void)
 	//char *line = "-1 * (a + b + c)";
 	//char *line = "(a + b + c) * -1";
 	//char *line = "a * x + (x - y) * x";
-	char *line = "(a - b) * (x - y)";
+	//char *line = "(a - b) * (x - y)";
+	//char *line = "(1 + (-1 * 1)) * c";
+	char *line = "(x / y)^a";
+	line = "(x * (y^-1))^b";
 	Expr *p = NULL;
 	op_tree = loadOps(op_tree);
 

@@ -27,6 +27,7 @@ struct Op {
 	char *short_name;					// like "+"
 	BinaryFunctionPointer f;			// like add(x, y)
 	BinaryCharFunctionPointer char_f;	// like charAdd(w, x, y)
+	BinaryCharFunctionPointer char_f_alt;	// like charSubtractAlt(w, x, y)
 	Op *inverse;					// inverse operation
 	char *left_dist_over[MAXCHAR];				// { " + ", NULL }
 	char *right_dist_over[MAXCHAR];				// (a + b) * c = a * c + b * c
@@ -62,6 +63,7 @@ Op *addOp(Op *p, Op op)
 		p->short_name = strdup(op.short_name);
 		p->f = op.f;
 		p->char_f = op.char_f;
+		p->char_f_alt = op.char_f_alt;
 		p->inverse = op.inverse;
 		p->left = NULL;
 		p->right = NULL;
@@ -175,6 +177,7 @@ Op *updateOp(Op *p, Op op)
 .short_name = "";
 .f = NULL;
 .char_f = NULL;
+.char_f_alt = NULL;
 .inverse = NULL;
 .left_dist_over[0] = NULL;
 .right_dist_over[0] = NULL;
@@ -320,6 +323,14 @@ void charSubtract(char w[], char *x, char *y)
 {
 	binaryCharFunction(w, x, y, " - ");
 }
+void charSubtractAlt(char w[], char *x, char *y)
+{
+	char yp[MAXCHAR] = "";
+	strcpy(yp, "-1 * ");
+	strcat(yp, y);
+
+	binaryCharFunction(w, x, yp, " + ");
+}
 void charSubtractLeftAssoc(char w[], char *a, char *b, char *c)
 {
 	leftAssocCharFunction(w, a, b, c, " - ");
@@ -367,6 +378,14 @@ double divide(double x, double y)
 void charDivide(char w[], char *x, char *y)
 {
 	binaryCharFunction(w, x, y, " / ");
+}
+void charDivideAlt(char w[], char *x, char *y)
+{
+	char yp[MAXCHAR] = "";
+	strcpy(yp, y);
+	strcat(yp, "^-1");
+
+	binaryCharFunction(w, x, yp, " * ");
 }
 void charDivideLeftAssoc(char w[], char *a, char *b, char *c)
 {
@@ -509,6 +528,7 @@ Op *loadOps(Op *p)
 	addition.short_name = "+";
 	addition.f = add;
 	addition.char_f = charAdd;
+	addition.char_f_alt = NULL;
 	addition.inverse = &subtraction;
 	addition.left_dist_over[0] = NULL;
 	addition.right_dist_over[0] = NULL;
@@ -524,6 +544,7 @@ Op *loadOps(Op *p)
 	subtraction.short_name = "-";
 	subtraction.f = subtract;
 	subtraction.char_f = charSubtract;
+	subtraction.char_f_alt = charSubtractAlt;
 	subtraction.inverse = &addition;
 	subtraction.left_dist_over[0] = NULL;
 	subtraction.right_dist_over[0] = NULL;
@@ -549,6 +570,7 @@ Op *loadOps(Op *p)
 	multiplication.short_name = "*";
 	multiplication.f = multiply;
 	multiplication.char_f = charMultiply;
+	multiplication.char_f_alt = NULL;
 	multiplication.inverse = &division;
 	multiplication.left_dist_over[0] = " + ";
 	multiplication.left_dist_over[1] = " - ";
@@ -568,6 +590,7 @@ Op *loadOps(Op *p)
 	division.short_name = "/";
 	division.f = divide;
 	division.char_f = charDivide;
+	division.char_f_alt = charDivideAlt;
 	division.inverse = &multiplication;
 	division.left_dist_over[0] = NULL;		// a / (b + c) != a / b + a / c
 	division.right_dist_over[0] = " + ";
@@ -594,9 +617,12 @@ Op *loadOps(Op *p)
 	exponentiation.short_name = "^";
 	exponentiation.f = exponen;
 	exponentiation.char_f = charExponen;
+	exponentiation.char_f_alt = NULL;
 	exponentiation.inverse = NULL;
 	exponentiation.left_dist_over[0] = NULL;
-	exponentiation.right_dist_over[0] = NULL;
+	exponentiation.right_dist_over[0] = " * ";
+	exponentiation.right_dist_over[1] = " / ";
+	exponentiation.right_dist_over[2] = NULL;
 	exponentiation.left_assoc = NULL;
 	exponentiation.right_assoc = charExponenRightAssoc;
 	exponentiation.char_left2right_assoc_f = NULL;
@@ -616,6 +642,7 @@ Op *loadOps(Op *p)
 	modulo.short_name = "%";
 	modulo.f = mod;
 	modulo.char_f = charMod;
+	modulo.char_f_alt = NULL;
 	modulo.inverse = NULL;
 	modulo.left_dist_over[0] = NULL;
 	modulo.right_dist_over[0] = NULL;
@@ -640,6 +667,7 @@ Op *loadOps(Op *p)
 	comma.short_name = ",";
 	comma.f = NULL;
 	comma.char_f = charComma;
+	comma.char_f_alt = NULL;
 	comma.inverse = NULL;
 	comma.left_dist_over[0] = NULL;
 	comma.right_dist_over[0] = NULL;
@@ -655,6 +683,7 @@ Op *loadOps(Op *p)
 	let.short_name = "=";
 	let.f = NULL;
 	let.char_f = charLet;
+	let.char_f_alt = NULL;
 	let.inverse = NULL;
 	let.left_dist_over[0] = NULL;
 	let.right_dist_over[0] = NULL;
@@ -684,6 +713,7 @@ Op *loadOps(Op *p)
 	equal.short_name = "==";
 	equal.f = NULL;
 	equal.char_f = charEqual;
+	equal.char_f_alt = NULL;
 	equal.inverse = NULL;
 	equal.left_dist_over[0] = NULL;
 	equal.right_dist_over[0] = NULL;
@@ -699,6 +729,7 @@ Op *loadOps(Op *p)
 	less.short_name = "<";
 	less.f = NULL;
 	less.char_f = charLess;
+	less.char_f_alt = NULL;
 	less.inverse = NULL;
 	less.left_dist_over[0] = NULL;
 	less.right_dist_over[0] = NULL;
@@ -714,6 +745,7 @@ Op *loadOps(Op *p)
 	leq.short_name = "<=";
 	leq.f = NULL;
 	leq.char_f = charLeq;
+	leq.char_f_alt = NULL;
 	leq.inverse = NULL;
 	leq.left_dist_over[0] = NULL;
 	leq.right_dist_over[0] = NULL;
@@ -729,6 +761,7 @@ Op *loadOps(Op *p)
 	greater.short_name = ">";
 	greater.f = NULL;
 	greater.char_f = charGreater;
+	greater.char_f_alt = NULL;
 	greater.inverse = NULL;
 	greater.left_dist_over[0] = NULL;
 	greater.right_dist_over[0] = NULL;
@@ -744,6 +777,7 @@ Op *loadOps(Op *p)
 	geq.short_name = ">=";
 	geq.f = NULL;
 	geq.char_f = charGeq;
+	geq.char_f_alt = NULL;
 	geq.inverse = NULL;
 	geq.left_dist_over[0] = NULL;
 	geq.right_dist_over[0] = NULL;
@@ -759,6 +793,7 @@ Op *loadOps(Op *p)
 	neq.short_name = "!=";
 	neq.f = NULL;
 	neq.char_f = charNeq;
+	neq.char_f_alt = NULL;
 	neq.inverse = NULL;
 	neq.left_dist_over[0] = NULL;
 	neq.right_dist_over[0] = NULL;
