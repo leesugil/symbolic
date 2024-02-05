@@ -9,6 +9,8 @@
 #include "expression.h"
 #include "_operation.h"
 
+extern Op *op_tree;
+
 /* run this at the beginning of the main code to load up the operation tree */
 Op *loadOps(Op *p);
 

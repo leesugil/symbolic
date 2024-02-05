@@ -9,8 +9,6 @@
 
 #include "operation.h"
 
-extern Op *op_tree;
-
 /* Expression
  * +-----------------------------------+
  * | Divider(Expression1, Expression2) |
@@ -180,6 +178,9 @@ static Expr *exprAlloc(void)
 	return (Expr *) malloc(sizeof(Expr));
 }
 
+void parseExprOpBy(char op[], char line[], char **op_list, char **pre, char **suf);
+void parseExprLeftBy(char lhs[], char *line, char **div_list, char **pre, char **suf);
+void parseExprRightBy(char rhs[], char *line, char **div_list, char **pre, char **suf);
 Expr *parseExpr(Expr *p);
 
 Expr *addExpr(Expr *p, char *name)
@@ -204,7 +205,12 @@ Expr *addExpr(Expr *p, char *name)
 }
 
 /* parseExpr: capsulates remove_outer_block, parseExprOp, parseExprLeft, parseExprRight */
-Expr *parseExprBinOp(Expr *p, char *op);
+/* input " = " causes error, keep capturing p->left == " = " causing infinite loop */
+Expr *parseExprs(Expr *p, int *flag);		/* check if it has multiple statements */
+Expr *parseExprDef(Expr *p, int *flag);		/* check if it is a definition statement */
+Expr *parseExprSt(Expr *p, int *flag);	/* check if it is a mathematical statement with LHS and RHS */
+Expr *parseExprReg(Expr *p, char **op_list);					/* regular (x + y) / z */
+void parseNegSign(char s[]);
 void refreshExprTree(Expr **p);
 
 Expr *parseExpr(Expr *p)
@@ -214,94 +220,277 @@ Expr *parseExpr(Expr *p)
 	if (p == NULL)
 		return NULL;
 
-	if (!is_blocked_properly_blk(p->name, block_start, block_end, NULL)) {
+	parseNegSign(p->name);
+	remove_outer_block_blk(p->name, block_start, block_end);
+
+	fprintf(stderr, "%s: parsing \"%s\"\n", prog, p->name);
+
+	fprintf(stderr, "%s: checking if blocked properly\n", prog);
+	int index = 0;
+	if (!is_blocked_properly_blk(p->name, block_start, block_end, &index)) {
+		fprintf(stderr, "%s: block error(s) found in \"%s\"\n", prog, p->name);
+		fprintf(stderr, "%s: returning expr unchanged\n", prog);
 		return p;
 	}
+	fprintf(stderr, "%s: (pass) checking if blocked properly\n", prog);
 
+	fprintf(stderr, "%s: checking if outer blocks are removed\n", prog);
+	index = 0;
 	// make sure there're no redundant outer blocks
-	while (is_outer_blocked_blk(p->name, block_start, block_end, NULL)) {
-		remove_outer_block_blk(p->name, block_start, block_end);
+	while (is_outer_blocked_blk(p->name, block_start, block_end, &index)) {
+		fprintf(stderr, "%s: outer block exists in \"%s\", removing...\n", prog, p->name);
+		remove_outer_block(p->name, block_start[index], block_end[index]);
+		fprintf(stderr, "%s: (pass) outer block exists in \"%s\", removing...\n", prog, p->name);
 	}
+	fprintf(stderr, "%s: (pass) checking if outer blocks are removed\n", prog);
 
 	/* see if it's about definition,
 	 * first by commas ',' */
 	/* if not, see if it has LHS and RHS */
 	/* if not, start parsing operations */
 	if (strcmp(p->name, "") != 0) {
+		int flag = 0;
 		/* check dividers ", " */
-		p = parseExprBinOp(p, ", ");
-		if (strcmp(p->op, "") == 0) {
+		fprintf(stderr, "%s: (1) p->name:\"%s\"\n", prog, p->name);
+		p = parseExprs(p, &flag);
+		if (flag == 1) {
+			/* no dividers */
 			/* check definitions " = " */
-			p = parseExprBinOp(p, " = ");
+			/* "x = " or " = " */
+			fprintf(stderr, "%s: (8) no \", \"-like dividers found in \"%s\"\n", prog, p->name);
+			p = parseExprDef(p, &flag);
 		}
-		if (strcmp(p->op, "") == 0) {
+		if (flag == 1) {
+			/* no definition statements */
 			/* check LHS, RHS, " == " */
-			p = parseExprBinOp(p, " == ");
+			fprintf(stderr, "%s: (15) no \" = \"-like divider found in \"%s\"\n", prog, p->name);
+			p = parseExprSt(p, &flag);
 		}
-		if (strcmp(p->op, "") == 0) {
+		if (flag == 1) {
+			/* no comparison statements */
 			/* regular math expressions */
-			p = parseExprBinOp(p, " - ");
-			p = parseExprBinOp(p, " + ");
-			p = parseExprBinOp(p, " / ");
-			p = parseExprBinOp(p, " * ");
-			p = parseExprBinOp(p, "^");
-			p = parseExprBinOp(p, " % ");
+			fprintf(stderr, "%s: (22) no \" == \"-like divider found in \"%s\"\n", prog, p->name);
+			p = parseExprReg(p, operators1);
+			p = parseExprReg(p, operators2);
+			p = parseExprReg(p, operators3);
+			p = parseExprReg(p, operators4);
+			p = parseExprReg(p, operators5);
 		}
 	} else {
 		/* p->name == "" */
-		fprintf(stderr, "%s: example) F = G * m * M / r^2\n", prog);
+		fprintf(stderr, "%s: p->name empty, nothing to parse\n", prog);
 	}
 
 	return p;
 }
-
-void parseExprOp(char w[], char line[], Op *op, char **pre, char **suf);
-void parseExprLeft(char lhs[], char *line, Op *op, char **pre, char **suf);
-void parseExprRight(char rhs[], char *line, Op *op, char **pre, char **suf);
-/* parseExprBinOp */
-Expr *parseExprBinOp(Expr *p, char *op)
+/* -x ==> -1 * x */
+void parseNegSign(char s[])
 {
-	char *prog = "parseExprBinOp";
+	convertNegSign(s);
+}
+/* check if it has multiple statements */
+Expr *parseExprs(Expr *p, int *flag)
+{
+	char *prog = "parseExprs";
 
 	if (p == NULL)
 		return p;
-	if (strlen(p->op) > 0)
+
+	char dum_line[MAXCHAR] = "";
+
+	parseExprLeftBy(dum_line, p->name, dividers, block_start, block_end);
+	/* use block_start and block_end to make a distinction when
+	 * vector notations are adopted as v = (x, y, z)
+	 * in future projects */
+	fprintf(stderr, "%s: (2)\n", prog);
+	if (dum_line[0] != '\0') {
+		*flag = 0;
+		/* f = (x + y), g = (y + z) */
+		fprintf(stderr, "(2.1) \", \"-like divider found in \"%s\"\n", p->name);
+		fprintf(stderr, "(3) candidate for p->left->name:\"%s\"\n", dum_line);
+		//parseNegSign(dum_line);
+		p->left = addExpr(p->left, dum_line);
+		fprintf(stderr, "(4) back to p->name:\"%s\"\n", p->name);
+		/* parseExprOpBy will apply mask... need a fix */
+		/* fixed (potentially) */
+		//parseExprOpBy(p->op, p->name, dividers, NULL, NULL);
+		/* wait, why was the masking an issue? */
+		parseExprOpBy(p->op, p->name, dividers, block_start, block_end);
+		fprintf(stderr, "(5) p->op:\"%s\"\n", p->op);
+		//parseExprRightBy(dum_line, p->name, dividers, NULL, NULL);
+		// why was the masking an issue?
+		parseExprRightBy(dum_line, p->name, dividers, block_start, block_end);
+		if (dum_line[0] != '\0') {
+			fprintf(stderr, "(6) p->right->name:\"%s\"\n", dum_line);
+			//parseNegSign(dum_line);
+			p->right = addExpr(p->right, dum_line);
+			fprintf(stderr, "(7) back to p->name:\"%s\"\n", p->name);
+		} else {
+			fprintf(stderr, "%s: p->right = NULL\n", prog);
+			if (p->right != NULL) {
+				fprintf(stderr, "%s: wait, p->right != NULL. check this out in detail.\n", prog);
+				fprintf(stderr, "%s: p->right->name=\"%s\"\n", prog, p->right->name);
+			}
+		}
+	} else {
+		fprintf(stderr, "%s: nothing to parse, flag == 1\n", prog);
+		*flag = 1;
+	}
+
+	return p;
+}
+/* check if it is a definition statement */
+Expr *parseExprDef(Expr *p, int *flag)
+{
+	char *prog = "parseExprDef";
+
+	char dum_line[MAXCHAR] = "";
+
+	parseExprLeftBy(dum_line, p->name, definitions, block_start, block_end);
+	fprintf(stderr, "(9)\n");
+	if (dum_line[0] != '\0') {
+		*flag = 0;
+		/* f = (x + y) */
+		fprintf(stderr, "%s: (10) \" = \"-like divider found in \"%s\"\n", prog, p->name);
+		fprintf(stderr, "%s: (10) candidate for p->left->name:\"%s\"\n", prog, dum_line);
+		//parseNegSign(dum_line);
+		p->left = addExpr(p->left, dum_line);
+		fprintf(stderr, "%s: (11) back to p->name:\"%s\"\n", prog, p->name);
+		parseExprOpBy(p->op, p->name, definitions, block_start, block_end);
+		fprintf(stderr, "%s: (12) p->op:\"%s\"\n", prog, p->op);
+		parseExprRightBy(dum_line, p->name, definitions, block_start, block_end);
+		/* for "x = " or " = ", dum_line == "" */
+		fprintf(stderr, "%s: (12.1) p->right candidate:\"%s\"\n", prog, dum_line);
+		if (dum_line[0] != '\0') {
+			fprintf(stderr, "%s: (13) p->right->name:\"%s\"\n", prog, dum_line);
+			//parseNegSign(dum_line);
+			p->right = addExpr(p->right, dum_line);
+			fprintf(stderr, "%s: (14) back to p->name:\"%s\"\n", prog, p->name);
+		} else {
+			fprintf(stderr, "%s: p->right = NULL\n", prog);
+			if (p->right != NULL) {
+				fprintf(stderr, "%s: wait, p->right != NULL. check this out in detail.\n", prog);
+				fprintf(stderr, "%s: p->right->name=\"%s\"\n", prog, p->right->name);
+			}
+		}
+	} else {
+		fprintf(stderr, "%s: nothing to parse, flag == 1\n", prog);
+		*flag = 1;
+	}
+
+	return p;
+}
+/* check if it is a mathematical statement with LHS and RHS */
+Expr *parseExprSt(Expr *p, int *flag)
+{
+	char *prog = "parseExprSt";
+
+	char dum_line[MAXCHAR] = "";
+
+	parseExprLeftBy(dum_line, p->name, comparisons, block_start, block_end);
+	fprintf(stderr, "(16)\n");
+	if (dum_line[0] != '\0') {
+		*flag = 0;
+		/* f + x == g * z */
+		fprintf(stderr, "(17) \" == \"-like divider found in \"%s\"\n", p->name);
+		fprintf(stderr, "(17) cadidate for p->left->name:\"%s\"\n", dum_line);
+		//parseNegSign(dum_line);
+		p->left = addExpr(p->left, dum_line);
+		fprintf(stderr, "(18) back to p->name:\"%s\"\n", p->name);
+		parseExprOpBy(p->op, p->name, comparisons, block_start, block_end);
+		fprintf(stderr, "(19) p->op:\"%s\"\n", p->op);
+		parseExprRightBy(dum_line, p->name, comparisons, block_start, block_end);
+		if (dum_line[0] != '\0') {
+			fprintf(stderr, "(20) p->right->name:\"%s\"\n", dum_line);
+			//parseNegSign(dum_line);
+			p->right = addExpr(p->right, dum_line);
+			fprintf(stderr, "(21) back to p->name:\"%s\"\n", p->name);
+		} else {
+			fprintf(stderr, "%s: p->right = NULL\n", prog);
+			if (p->right != NULL) {
+				fprintf(stderr, "%s: wait, p->right != NULL. check this out in detail.\n", prog);
+				fprintf(stderr, "%s: p->right->name=\"%s\"\n", prog, p->right->name);
+			}
+		}
+	} else {
+		fprintf(stderr, "%s: nothing to parse, flag == 1\n", prog);
+		*flag = 1;
+	}
+
+	return p;
+}
+/* parseExprReg: parse regular mathematical expressions */
+// there's gotta be more depth to this algorithm.
+// consider the example:
+// a * x + b * y
+// typing this much is already a huge compromise to users, so don't expect that they'll put
+// (a * x) + (b * y)
+// this is on of the top urgent future updates.
+// a * x + b * y
+//   ^
+//   |
+//   +-- if detected,
+//       look left and right to see if
+//       ...
+// or basically, { +, - } should've been searched first with higher priority, (weaker bond)
+// then { *, /, ^ }.
+// { % } is a special case, i'll have to deal with it later.
+// like a * (b % c) * d + e kind of crazyness.
+//  ==> +, *, % order...
+Expr *parseExprReg(Expr *p, char **op_list)
+{
+	char *prog = "parseExprOp";
+
+	char dum_line[MAXCHAR] = "";
+	strcpy(dum_line, p->name);
+
+	if (strcmp(p->op, "") != 0) {
+		//parseNegSign(dum_line);
 		return p;
+	}
 
-	char binop[MAXCHAR] = "";
-	char left[MAXCHAR] = "";
-	char right[MAXCHAR] = "";
-
-	/* op parsing first as left- and right-parsing are based on p->op */
-	Op *opp = getOp(op_tree, op);
-	if (opp != NULL) {
-		parseExprOp(binop, p->name, opp, block_start, block_end);
-		if (binop[0] != '\0') {
-			strcpy(p->op, binop);
-			parseExprLeft(left, p->name, opp, block_start, block_end);
-			if (left[0] != '\0')
-				p->left = addExpr(p->left, left);
-			parseExprRight(right, p->name, opp, block_start, block_end);
-			if (right[0] != '\0')
-				p->right = addExpr(p->right, right);
+	parseExprLeftBy(dum_line, p->name, op_list, block_start, block_end);
+	if (dum_line[0] != '\0') {
+		fprintf(stderr, "(23) p->left->name:\"%s\"\n", dum_line);
+		//parseNegSign(dum_line);
+		p->left = addExpr(p->left, dum_line);
+		fprintf(stderr, "(24) back to p->name:\"%s\"\n", p->name);
+	} else {
+		fprintf(stderr, "%s: p->left = NULL\n", prog);
+		if (p->left != NULL) {
+			fprintf(stderr, "%s: wait, p->left != NULL ??\n", prog);
+			fprintf(stderr, "%s: p->left->name=\"%s\"\n", prog, p->left->name);
+		}
+	}
+	parseExprOpBy(p->op, p->name, op_list, block_start, block_end);
+	fprintf(stderr, "(25) p->op:\"%s\"\n", p->op);
+	parseExprRightBy(dum_line, p->name, op_list, block_start, block_end);
+	if (dum_line[0] != '\0') {
+		fprintf(stderr, "(26) p->right->name:\"%s\"\n", dum_line);
+		//parseNegSign(dum_line);
+		p->right = addExpr(p->right, dum_line);
+		fprintf(stderr, "(27) back to p->name:\"%s\"\n", p->name);
+	} else {
+		fprintf(stderr, "%s: p->right = NULL\n", prog);
+		if (p->left != NULL) {
+			fprintf(stderr, "%s: wait, p->right != NULL ??\n", prog);
+			fprintf(stderr, "%s: p->right->name=\"%s\"\n", prog, p->right->name);
 		}
 	}
 
 	return p;
 }
-
 void listExpr(Expr *p);
 Expr *evalExpr(Expr *p);
 Expr *_distExpr(Expr *p, char *prod, char *sum);
 void testparseExpr(void)
 {
-	op_tree = loadOps(op_tree);
 	//char *line = "a * x^2 + b * x^1 + c * x^0";
-	char *line = "x * (a * (b - c) / d / e) / y";
+	//char *line = "x * (a * (b - c) / d) / y";
 	//char *line = "a / (b - c)";
 	//char *line = "a * ((b / d) - (c / d))";
 	//char *line = "(b / d) - (c / d)";
-	//char *line = "x * a * (b - c) / d / y * z + x";
+	char *line = "x * a * (b - c) / d / y * z + x";
 	Expr *expr = NULL;
 
 	expr = addExpr(expr, line);
@@ -311,154 +500,157 @@ void testparseExpr(void)
 	printf("---\n");
 }
 
-/* parseExprOp: if undetected, w = "" */
-// in the current version, every operation is assumed to be right-associative.
-// this algo should be updated to be more complicated so that
-// left-assoc and right-assoc rules are applied properly.
-void parseExprOp(char w[], char line[], Op *op, char **b_start, char **b_end)
+/* parseExprOpBy: from a formula, parse the primary operator part */
+//void parseExprOpBy(char op[], char line[], char **op_list)
+void parseExprOpBy(char op[], char line[], char **op_list, char **b_start, char **b_end)
 {
+	/* (x + y) * z	-> strstrmaskblk will do.
+	 * x + (y + z) * z -> strstrmaskblk will do.
+	 * (x + y) * (x + z)	-> strstrmaskblk will do.
+	 * (x + y * z)	-> strstrmaskblk will handle it!.
+	 * */
+	/* strstrmaskblk now works properly! */
 	char *prog = "parseExprOp";
+	char *p, *q = NULL;
+	int i;
+	int index = 0;
 
-	char *p = NULL;
-	w[0] = '\0';
+	/* index updated to the one in op_list */
+	q = strstrblkmaskblk(line, op_list, &index, b_start, b_end);
 
-	if (op == NULL)
-		return;
-	if (op->right_assoc != NULL) {
-		p = strstrmaskblk(line, op->name, NULL, b_start, b_end);
-	} else if (op->left_assoc != NULL) {
-		p = strrstrmaskblk(line, op->name, NULL, b_start, b_end);
-	}
-	if (p != NULL) {
-		/* this makes parseExprLeft and parseExprRight to trigger */
-		strcpy(w, p);
-		firstnstr(w, strlen(op->name));
+	/* q is the best candidate containing op_list[index] in front */
+	if (q != NULL) {
+		fprintf(stderr, "%s: retrieving the first %lu characters from the best candidate...\n", prog, strlen(op_list[index]));
+		strcpy(op, q);
+		i = strlen(q) - strlen(op_list[index]);
+		bcutnstr(op, i);
+	} else {
+		fprintf(stderr, "%s: there's no op to retrieve\n", prog);
+		op[0] = '\0';
 	}
 }
-void testparseExprOp(void)
+void testparseExprOpBy(void)
 {
 	char line1[MAXCHAR] = "(((x + y) * y)^(y + z))";
 	char line2[MAXCHAR] = "(((x + y) * y) + (y + z))";
 	char line3[MAXCHAR] = "(((x + y) * y) % (y + z))";
 	char line4[MAXCHAR] = "((((x + y) * y) % (y + z))";
 	char line5[MAXCHAR] = "f = (((x + y) * y), g = (y + z))";
-	char w[MAXCHAR] = "";
-	op_tree = loadOps(op_tree);
-	char *name = " + ";
-	Op *op = getOp(op_tree, name);
+	char op[MAXCHAR] = "";
 
-	parseExprOp(w, line1, op, block_start, block_end);
-	printf("input: \"%s\", \"%s\"\n", name, line1);
-	printf("testparseExprOp: line1, \"%s\"\n\n", w);
+	printf("input: \"%s\"\n", line1);
+	parseExprOpBy(op, line1, operators, block_start, block_end);
+	printf("testparseExprOpBy: line1, \"%s\"\n\n", op);
 
-	parseExprOp(w, line2, op, block_start, block_end);
-	printf("input: \"%s\", \"%s\"\n", name, line2);
-	printf("testparseExprOp: line2, \"%s\"\n\n", w);
+	printf("input: \"%s\"\n", line2);
+	op[0] = '\0';
+	parseExprOpBy(op, line2, operators, block_start, block_end);
+	printf("testparseExprOpBy: line2, \"%s\"\n\n", op);
 
-	parseExprOp(w, line3, op, block_start, block_end);
-	printf("input: \"%s\", \"%s\"\n", name, line3);
-	printf("testparseExprOp: line3, \"%s\"\n\n", w);
+	printf("input: \"%s\"\n", line3);
+	op[0] = '\0';
+	parseExprOpBy(op, line3, operators, block_start, block_end);
+	printf("testparseExprOpBy: line3, \"%s\"\n\n", op);
+
+	printf("input: \"%s\"\n", line4);
+	op[0] = '\0';
+	parseExprOpBy(op, line4, operators, block_start, block_end);
+	printf("testparseExprOpBy: line4, \"%s\"\n\n", op);
+
+	printf("input: \"%s\"\n", line5);
+	op[0] = '\0';
+	parseExprOpBy(op, line5, dividers, block_start, block_end);
+	printf("testparseExprOpBy: line5, \"%s\"\n\n", op);
 }
 
-/* parseExprLeft: whether the condition given by the " = "-type or the " == "-type, the function parses the relevant LHS part.
- * if undetected, w = "" */
-void parseExprLeft(char w[], char *line, Op *op, char **b_start, char **b_end)
+/* parseExprLeftBy: whether the condition given by the " = "-type or the " == "-type, the function parses the relevant LHS part */
+void parseExprLeftBy(char w[], char *line, char **bulk, char **b_start, char **b_end)
 {
+	/* do strstrblk with ==, <, >, etc., get n, and do bcutnstr */
 	char *prog = "parseExprLeft";
-
+	int index = 0;
 	char *p = NULL;
-	w[0] = '\0';
 
-	if (op == NULL)
-		return;
-	if (op->right_assoc != NULL) {
-		p = strstrmaskblk(line, op->name, NULL, b_start, b_end);
-	} else if (op->left_assoc != NULL) {
-		p = strrstrmaskblk(line, op->name, NULL, b_start, b_end);
+	fprintf(stderr, "%s: parse subject:\"%s\"\n", prog, line);
+	
+	/* index updated is for bulk */
+	p = strstrblkmaskblk(line, bulk, &index, b_start, b_end);
+
+	if (p == NULL) {
+		fprintf(stderr, "%s: there is no LHS to parse\n", prog);
+		w[0] = '\0';
 	}
-	if (p != NULL) {	// should be always true if input is correct
+	else {
+		int n = strlen(p);
+		fprintf(stderr, "%s: p:\"%s\", n:%d\n", prog, p, n);
 		strcpy(w, line);
-		firstnstr(w, strlen(line) - strlen(p));
-		// make sure there're no redundant outer blocks
-		while (is_outer_blocked_blk(w, block_start, block_end, NULL)) {
-			remove_outer_block_blk(w, block_start, block_end);
-		}
+		bcutnstr(w, n);
+		fprintf(stderr, "%s: parsed:\"%s\"\n", prog, w);
 	}
 }
-void testparseExprLeft(void)
+void testparseExprLeftBy(void)
 {
 	char *line1 = "this is a test LHS = this is a test RHS";
-	char *line2 = "this is a test LHS == this is a test RHS";
 	char w[MAXCHAR] = "";
-	op_tree = loadOps(op_tree);
-	char *name = " = ";
-	Op *op = getOp(op_tree, name);
 
-	parseExprLeft(w, line1, op, block_start, block_end);
-	printf("input: \"%s\", \"%s\"\n", name, line1);
+	printf("input: \"%s\"\n", line1);
+	parseExprLeftBy(w, line1, comparisons, NULL, NULL);
 	printf("testparseexprleft: \"%s\"\n", w);
 
-	parseExprLeft(w, line2, op, block_start, block_end);
-	printf("input: \"%s\", \"%s\"\n", name, line2);
-	printf("testparseexprleft: \"%s\"\n", w);
-}
-
-/* parseExprRight: if undetected, w = "" */
-// in the current version, every operation is assumed to be right-associative.
-// this algo should be updated to be more complicated so that
-// left-assoc and right-assoc rules are applied properly.
-void parseExprRight(char w[], char *line, Op *op, char **b_start, char **b_end)
-{
-	char *prog = "parseExprRight";
-
-	char *p = NULL;
+	char *line2 = "this is a test LHS >= this is a test RHS";
 	w[0] = '\0';
 
-	if (op == NULL)
-		return;
-	if (op->right_assoc != NULL) {
-		p = strstrmaskblk(line, op->name, NULL, b_start, b_end);
-	} else if (op->left_assoc != NULL) {
-		p = strrstrmaskblk(line, op->name, NULL, b_start, b_end);
+	printf("input: \"%s\"\n", line2);
+	parseExprLeftBy(w, line2, comparisons, NULL, NULL);
+	printf("testparseexprleft: \"%s\"\n", w);
+}
+
+void parseExprRightBy(char w[], char *line, char **bulk, char **b_start, char **b_end)
+{
+	/* do strstrblk with " = ", get n, do fcutnstr */
+	char *prog = "parseExprRight";
+	int index = 0;
+	char *p = NULL;
+
+	fprintf(stderr, "%s: parse subject:\"%s\"\n", prog, line);
+
+	/* index updated is for bulk */
+	p = strstrblkmaskblk(line, bulk, &index, b_start, b_end);
+	/* when line = " = ", this gave p == NULL */
+
+	if (p == NULL) {
+		fprintf(stderr, "%s: there is no RHS to parse\n", prog);
+		w[0] = '\0';
 	}
-	if (p != NULL) {
+	else {
+		fprintf(stderr, "%s: RHS before removing the operator part:\"%s\"\n", prog, p);
+		int n = strlen(bulk[index]);
+		fprintf(stderr, "%s: deleting the first %d characters\n", prog, n);
 		strcpy(w, p);
-		fcutnstr(w, strlen(op->name));
-		// make sure there're no redundant outer blocks
-		while (is_outer_blocked_blk(w, block_start, block_end, NULL)) {
-			remove_outer_block_blk(w, block_start, block_end);
-		}
+		fcutnstr(w, n);
+		fprintf(stderr, "%s: output:\"%s\"\n", prog, w);
 	}
 }
-void testparseExprRight(void)
+void testparseExprRightBy(void)
 {
 	char *line1 = "this is a test LHS = this is a test RHS";
 	char w[MAXCHAR] = "";
-	op_tree = loadOps(op_tree);
-	char *name = " = ";
-	Op *op = getOp(op_tree, name);
 
-	printf("input: \"%s\", \"%s\"\n", name, line1);
-	parseExprRight(w, line1, op, block_start, block_end);
+	printf("input: \"%s\"\n", line1);
+	parseExprRightBy(w, line1, comparisons, NULL, NULL);
 	printf("testparseexprright: \"%s\"\n", w);
 
 	char *line2 = "this is a test LHS >= this is a test RHS";
 	w[0] = '\0';
 
-	name = " >= ";
-	op = getOp(op_tree, name);
-	printf("input: \"%s\", \"%s\"\n", name, line2);
-	parseExprRight(w, line2, op, block_start, block_end);
+	printf("input: \"%s\"\n", line2);
+	parseExprRightBy(w, line2, comparisons, NULL, NULL);
 	printf("testparseexprright: \"%s\"\n", w);
+}
 
-	char *line3 = "this is a test LHS > this is a test RHS";
-	w[0] = '\0';
-
-	name = " >= ";
-	op = getOp(op_tree, name);
-	printf("input: \"%s\", \"%s\"\n", name, line3);
-	parseExprRight(w, line3, op, block_start, block_end);
-	printf("testparseexprright: \"%s\"\n", w);
+void displayExprOp(Expr *p)
+{
+	printf("op:\"%s\"\n", p->op);
 }
 
 /* listExpr: in-order print of tree p */
@@ -473,7 +665,7 @@ void listExpr(Expr *p)
 		listExpr(p->left);
 		if (strlen(p->op) > 0) {
 			printn("\t", tabs);
-			printf("op:\"%s\"\n", p->op);
+			displayExprOp(p);
 		}
 		listExpr(p->right);
 		tabs--;
@@ -488,6 +680,8 @@ void _removeExpr(Expr *p)
 		_removeExpr(p->right);
 		p->left = NULL;
 		p->right = NULL;
+		//free(p->name);	//no longer dynamically allocated
+		//free(p->op);		//no longer dynamically allocated
 		strcpy(p->name, "");
 		strcpy(p->op, "");
 		free(p);
@@ -501,13 +695,7 @@ void removeExpr(Expr **p)
 	*p = NULL;
 }
 
-/* evalExpr: evaluates an expr explicitly with parenthesis */
-// is this really needed?
-// this does the strict parenthesis job.
-// a * b * c ==> a * (b * c)
-// in the current version, every operation is assumed to be right-associative.
-// this algo should be updated to be more complicated so that
-// left-assoc and right-assoc rules are applied properly.
+/* evalExpr: evaluates an expr */
 Expr *evalExpr(Expr *p)
 {
 	if (p == NULL)
@@ -516,35 +704,20 @@ Expr *evalExpr(Expr *p)
 	p->left = evalExpr(p->left);
 	p->right = evalExpr(p->right);
 
-	if (p->left != NULL) {
+	if (p->left != NULL)
 		strcpy(p->name, p->left->name);
-		if ((strcmp(p->left->op, "")
-				* strcmp(p->op, ", ")
-				* strcmp(p->op, " = ")
-				* strcmp(p->op, " == ")
-				* strcmp(p->op, " >= ")
-				* strcmp(p->op, " > ")
-				* strcmp(p->op, " <= ")
-				* strcmp(p->op, " < ")) != 0)
-			parenthstr(p->name);
-	}
-	if (strlen(p->op) > 0) {
-		strcat(p->name, p->op);
-	}
-	if (p->right != NULL) {
-		char right[MAXCHAR] = "";
-		strcpy(right, p->right->name);
-		if ((strcmp(p->right->op, "")
-				* strcmp(p->op, ", ")
-				* strcmp(p->op, " = ")
-				* strcmp(p->op, " == ")
-				* strcmp(p->op, " >= ")
-				* strcmp(p->op, " > ")
-				* strcmp(p->op, " <= ")
-				* strcmp(p->op, " < ")) != 0)
-			parenthstr(right);
-		strcat(p->name, right);
-	}
+	strcat(p->name, p->op);
+	if (p->right != NULL)
+		strcat(p->name, p->right->name);
+	if ((strcmp(p->op, "")
+			* strcmp(p->op, ", ")
+			* strcmp(p->op, " = ")
+			* strcmp(p->op, " == ")
+			* strcmp(p->op, " >= ")
+			* strcmp(p->op, " > ")
+			* strcmp(p->op, " <= ")
+			* strcmp(p->op, " < ")) != 0)
+		parenthstr(p->name);
 
 	return p;
 }
@@ -561,6 +734,16 @@ void testevalExpr(void)
 	listExpr(p);
 }
 
+/* reduceExpr */
+/* this is the real challenge. given an arithmetic expression - yes, start with the arithmetic case first - evaluate as much as possible based on known values. */
+/* this could've been implemeted as a stand-alone feature, and this is what essentially doing the algebra */
+/* an idea:
+ * 1) make lists of operations by their properties, like distributive, commutative, associative, etc.
+ * 2) turn an expr into the most possibly distributed order
+ * 3) don't mind the associativity for now, we're not seeking the fastest way to solve it for now
+ * 4) using commutativity whenever applicable, each term in the most distributed form should be symbolically ordered?
+ * 5) how would i detect (number) * (number) * (letter)?
+ * ... */
 Expr *refreshExpr(Expr *p)
 {
 	if (p->left == NULL || p-> right == NULL)
@@ -615,6 +798,11 @@ Expr *_distExprLeft2Right(Expr *p, char *prod, char *sum)
 	char left[MAXCHAR] = "";
 	char right[MAXCHAR] = "";
 	char dum_line[MAXCHAR] = "";
+	int index = 0;
+	char *sum2[] = {
+		sum,
+		NULL
+	};
 
 	/* just update p->name based on p->left and p->right */
 	p = refreshExpr(p);
@@ -626,10 +814,9 @@ Expr *_distExprLeft2Right(Expr *p, char *prod, char *sum)
 				/* there is an operation in RHS to distribute the primary operation over */
 				/* (p->left->name p->op parseExprLeftBy) parseExprOpBy (p->left->name p->op parseExprRightBy) */
 				// "left" will be the p->right->left->name part
-				Op *q = getOp(op_tree, sum);
-				parseExprLeft(left, p->right->name, q, block_start, block_end);
+				parseExprLeftBy(left, p->right->name, sum2, block_start, block_end);
 				// "right" will be the p->right->right->name part
-				parseExprRight(right, p->right->name, q, block_start, block_end);
+				parseExprRightBy(right, p->right->name, sum2, block_start, block_end);
 				/* (a + b) * (c + d + e) */
 				strcpy(dum_line, p->left->name);	// a + b
 				if (strcmp(p->left->op, "") != 0)
@@ -706,6 +893,11 @@ Expr *_distExprRight2Left(Expr *p, char *prod, char *sum)
 	char left[MAXCHAR] = "";
 	char right[MAXCHAR] = "";
 	char dum_line[MAXCHAR] = "";
+	int index = 0;
+	char *sum2[] = {
+		sum,
+		NULL
+	};
 	/* realized that the function's supposed to update p->name even if there's nothing to distribute at the current level because of updates made in p->left and p->right */
 
 	/* just update p->name based on p->left and p->right */
@@ -718,10 +910,9 @@ Expr *_distExprRight2Left(Expr *p, char *prod, char *sum)
 				/* there is an operation in LHS to distribute the primary operation over */
 				/* (p->right->name p->op parseExprLeftBy) parseExprOpBy (p->right->name p->op parseExprRightBy) */
 				// "left" will be the p->left->left->name part
-				Op *q = getOp(op_tree, sum);
-				parseExprLeft(left, p->left->name, q, block_start, block_end);
+				parseExprLeftBy(left, p->left->name, sum2, block_start, block_end);
 				// "right" will be the p->left->right->name part
-				parseExprRight(right, p->left->name, q, block_start, block_end);
+				parseExprRightBy(right, p->left->name, sum2, block_start, block_end);
 				/* (a + b + c) * d */
 				if (strcmp(p->left->op, "") != 0)
 					parenthstr(left);
