@@ -200,14 +200,15 @@ void binaryCharFunction(char w[], char *x, char *y, char *bop)
 	strcpy(x1, x);
 	strcpy(y1, y);
 
+	/* do not determine parentheses here
 	while (is_outer_blocked_blk(x1, block_start, block_end, NULL))
 		remove_outer_block_blk(x1, block_start, block_end);
 	while (is_outer_blocked_blk(y1, block_start, block_end, NULL))
 		remove_outer_block_blk(y1, block_start, block_end);
 
-	//parenthstr(x1);
-	//parenthstr(y1);
-	w[0] = '\0';
+	parenthstr(x1);
+	parenthstr(y1);
+	*/
 	strcpy(w, x1);
 	strcat(w, bop);
 	strcat(w, y1);

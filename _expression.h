@@ -539,6 +539,7 @@ Expr *refreshExprNode(Expr *p)
 	if (strcmp(p->op, "") == 0)
 		return p;
 
+	/* legacy
 	Op *op = getOp(op_tree, p->op);
 	int l = -1, r = -1;
 	if (op->right_dist_over[0] != NULL) {
@@ -555,15 +556,16 @@ Expr *refreshExprNode(Expr *p)
 				break;
 			}
 	}
+	*/
 
 	char line[MAXCHAR] = "";
 	strcpy(line, p->left->name);
-	if (l != -1)
+	if (strlen(p->left->op) > 0)
 		parenthstr(line);
 	strcpy(p->name, line);
 	strcat(p->name, p->op);
 	strcpy(line, p->right->name);
-	if (r != -1)
+	if (strlen(p->right->op) > 0)
 		parenthstr(line);
 	strcat(p->name, line);
 
@@ -599,6 +601,7 @@ Expr *_distExpr(Expr *p)
 		for (int i = 0; op->right_dist_over[i] != NULL; i++)
 			if (strcmp(p->left->op, op->right_dist_over[i]) == 0) {
 				l = i;
+				fprintf(stderr, "%s: right distribution detected at \"%s\"\n", prog, p->name);
 				break;
 			}
 	}
@@ -606,6 +609,7 @@ Expr *_distExpr(Expr *p)
 		for (int i = 0; op->left_dist_over[i] != NULL; i++)
 			if (strcmp(p->right->op, op->left_dist_over[i]) == 0) {
 				r = i;
+				fprintf(stderr, "%s: left distribution detected at \"%s\"\n", prog, p->name);
 				break;
 			}
 	}
@@ -621,7 +625,9 @@ Expr *_distExpr(Expr *p)
 		char x[MAXCHAR] = "";
 		char y[MAXCHAR] = "";
 		char right[MAXCHAR] = "";
-		parseExprRight(right, p->name, op, block_start, block_end);
+		strcpy(right, p->right->name);
+		if (strlen(p->right->op) > 0)
+			parenthstr(right);
 		Op *op_left = getOp(op_tree, p->left->op);
 		char left_left[MAXCHAR] = "";
 		parseExprLeft(left_left, p->left->name, op_left, block_start, block_end);
@@ -640,7 +646,9 @@ Expr *_distExpr(Expr *p)
 		char x[MAXCHAR] = "";
 		char y[MAXCHAR] = "";
 		char left[MAXCHAR] = "";
-		parseExprLeft(left, p->name, op, block_start, block_end);
+		strcpy(left, p->left->name);
+		if (strlen(p->left->op) > 0)
+			parenthstr(left);
 		Op *op_right = getOp(op_tree, p->right->op);
 		char right_left[MAXCHAR] = "";
 		parseExprLeft(right_left, p->right->name, op_right, block_start, block_end);
@@ -678,8 +686,8 @@ void testdistExpr(void)
 	//char *line = "-1 * y * (a * x^2 + b * x^1 + c * x^0)";
 	//char *line = "-1 * (a + b + c)";
 	//char *line = "(a + b + c) * -1";
-	char *line = "a * x + (x - y) * x";
-	//char *line = "(a - b) * x";
+	//char *line = "a * x + (x - y) * x";
+	char *line = "(a - b) * (x - y)";
 	Expr *p = NULL;
 	op_tree = loadOps(op_tree);
 
@@ -689,9 +697,8 @@ void testdistExpr(void)
 	listExpr(p);
 	printf("---\n");
 
-	p = distExpr(p);
-
 	printf("testdistExpr\n");
+	p = distExpr(p);
 	listExpr(p);
 	printf("---\n");
 }
