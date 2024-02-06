@@ -819,9 +819,12 @@ Op *loadOps(Op *p)
 	exponentiation.left_dist_over_by[0][0] = " + ";
 	exponentiation.left_dist_over_by[0][1] = " * ";
 	exponentiation.left_dist_over_by[0][2] = NULL;
-	exponentiation.left_dist_over_by[1][0] = NULL;
-	exponentiation.left_dist_over_by[1][1] = NULL;
+	exponentiation.left_dist_over_by[1][0] = " - ";//
+	exponentiation.left_dist_over_by[1][1] = " / ";//
 	exponentiation.left_dist_over_by[1][2] = NULL;
+	exponentiation.left_dist_over_by[2][0] = NULL;
+	exponentiation.left_dist_over_by[2][1] = NULL;
+	exponentiation.left_dist_over_by[2][2] = NULL;
 	exponentiation.left_dist_over_char_f = leftDistOverExponen;
 	exponentiation.right_dist_over[0] = " * ";
 	exponentiation.right_dist_over[1] = " / ";

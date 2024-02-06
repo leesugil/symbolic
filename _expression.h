@@ -659,7 +659,13 @@ Expr *_expExpr(Expr *p)
 			if (strlen(p->right->op) > 0)
 				parenthstr(right);
 			parseExprLeft(left_left, p->left->name, getOp(op_tree, p->left->op), block_start, block_end);
+			if (p->left->left != NULL)
+				if (strlen(p->left->left->op) > 0)
+					parenthstr(left_left);
 			parseExprRight(left_right, p->left->name, getOp(op_tree, p->left->op), block_start, block_end);
+			if (p->left->right != NULL)
+				if (strlen(p->left->right->op) > 0)
+					parenthstr(left_right);
 			op->right_assoc_by(line, left_left, left_right, right, op2);
 		}
 	}
@@ -675,7 +681,13 @@ Expr *_expExpr(Expr *p)
 			if (strlen(p->left->op) > 0)
 				parenthstr(left);
 			parseExprLeft(right_left, p->right->name, getOp(op_tree, p->right->op), block_start, block_end);
+			if (p->right->left != NULL)
+				if (strlen(p->right->left->op) > 0)
+					parenthstr(right_left);
 			parseExprRight(right_right, p->right->name, getOp(op_tree, p->right->op), block_start, block_end);
+			if (p->right->right != NULL)
+				if (strlen(p->right->right->op) > 0)
+					parenthstr(right_right);
 			op->left_assoc_by(line, left, right_left, right_right, op2);
 		}
 	}
@@ -692,7 +704,13 @@ Expr *_expExpr(Expr *p)
 			if (strlen(p->left->op) > 0)
 				parenthstr(left);
 			parseExprLeft(right_left, p->right->name, getOp(op_tree, p->right->op), block_start, block_end);
+			if (p->right->left != NULL)
+				if (strlen(p->right->left->op) > 0)
+					parenthstr(right_left);
 			parseExprRight(right_right, p->right->name, getOp(op_tree, p->right->op), block_start, block_end);
+			if (p->right->right != NULL)
+				if (strlen(p->right->right->op) > 0)
+					parenthstr(right_right);
 			op->left_dist_over_char_f(line, left, right_left, right_right, op2);
 		}
 	}
@@ -708,7 +726,13 @@ Expr *_expExpr(Expr *p)
 			if (strlen(p->right->op) > 0)
 				parenthstr(right);
 			parseExprLeft(left_left, p->left->name, getOp(op_tree, p->left->op), block_start, block_end);
+			if (p->left->left != NULL)
+				if (strlen(p->left->left->op) > 0)
+					parenthstr(left_left);
 			parseExprRight(left_right, p->left->name, getOp(op_tree, p->left->op), block_start, block_end);
+			if (p->left->right != NULL)
+				if (strlen(p->left->right->op) > 0)
+					parenthstr(left_right);
 			op->right_dist_over_char_f(line, right, left_left, left_right, op2);
 		}
 	}
@@ -733,8 +757,8 @@ Expr *expExpr(Expr *p)
 void testexpExpr(void)
 {
 	char *line = "(x^a)^b";
-	line = "x^(a + b)";
-	line = "(x^(a + b))^(c + d)";
+	line = "x^(a - b)";
+	//line = "(x^(a + b))^(c + d)";
 	Expr *p = NULL;
 	op_tree = loadOps(op_tree);
 
