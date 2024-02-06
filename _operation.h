@@ -14,7 +14,7 @@ typedef void (*LeftAssocByCharFunctionPointer)(char w[], char *a, char *b, char 
 typedef void (*RightAssocByCharFunctionPointer)(char w[], char *a, char *b, char *c, char *op2);
 typedef void (*AssocCharFunctionPointer)(char [], char *, char *);
 typedef void (*LeftDistOverCharFunctionPointer)(char w[], char *x, char *a, char *b, char *op2);
-typedef void (*RightDistOverCharFunctionPointer)(char w[], char *x, char *a, char *b, char op2);
+typedef void (*RightDistOverCharFunctionPointer)(char w[], char *x, char *a, char *b, char *op2);
 typedef struct Op Op;
 
 Op *op_tree = NULL;
@@ -251,11 +251,11 @@ Op *updateOp(Op *p, Op op)
 .left2right_assoc_by[0][0] = NULL;
 .left2right_assoc_by[0][1] = NULL;
 .left2right_assoc_by[0][2] = NULL;
-.right_assoc_by;
+.right_assoc_by = NULL;
 .right2left_assoc_by[0][0] = NULL;
 .right2left_assoc_by[0][1] = NULL;
 .right2left_assoc_by[0][2] = NULL;
-.left_assoc_by;
+.left_assoc_by = NULL;
 .comm = NULL;
 .right_unit = "";
 .left_unit = "";
@@ -416,25 +416,25 @@ void right2leftAssocAdd(char w[], char *a, char *right)
 void leftAssocByAdd(char w[], char *a, char *b, char *c, char *op2)
 {
 	// this is a sample function
-	LeftAssocByCharFunction(w, a, b, c, " + ", op2)
+	LeftAssocByCharFunction(w, a, b, c, " + ", op2);
 }
 // a op (b op2 c)
 void rightAssocByAdd(char w[], char *a, char *b, char *c, char *op2)
 {
 	// this is a sample function
-	RightAssocByCharFunction(w, a, b, c, " + ", op2)
+	RightAssocByCharFunction(w, a, b, c, " + ", op2);
 }
 // (x op a) op2 (x op b)
 void leftDistOverAdd(char w[], char *x, char *a, char *b, char *op2)
 {
 	// this is a sample function
-	LeftDistOverCharFunction(w, x, a, b, " + ", op2)
+	LeftDistOverCharFunction(w, x, a, b, " + ", op2);
 }
 // (a op x) op2 (b op x)
 void rightDistOverCharFunction(char w[], char *x, char *a, char *b, char *op2)
 {
 	// this is a sample function
-	RightDistOverCharFunction(w, x, a, b, " + ", op2)
+	RightDistOverCharFunction(w, x, a, b, " + ", op2);
 }
 
 double subtract(double x, double y)
@@ -532,14 +532,12 @@ void charExponenRightAssoc(char w[], char *a, char *b, char *c)
 // (x op a) op2 (x op b)
 void leftDistOverExponen(char w[], char *x, char *a, char *b, char *op2)
 {
-	// this is a sample function
-	LeftDistOverCharFunction(w, x, a, b, "^", op2)
+	LeftDistOverCharFunction(w, x, a, b, "^", op2);
 }
 // a op (b op2 c)
 void rightAssocByExponen(char w[], char *a, char *b, char *c, char *op2)
 {
-	// this is a sample function
-	RightAssocByCharFunction(w, a, b, c, "^", op2)
+	RightAssocByCharFunction(w, a, b, c, "^", op2);
 }
 
 /***************************
@@ -681,11 +679,11 @@ Op *loadOps(Op *p)
 	addition.left2right_assoc_by[0][0] = NULL;
 	addition.left2right_assoc_by[0][1] = NULL;
 	addition.left2right_assoc_by[0][2] = NULL;
-	addition.right_assoc_by;
+	addition.right_assoc_by = NULL;
 	addition.right2left_assoc_by[0][0] = NULL;
 	addition.right2left_assoc_by[0][1] = NULL;
 	addition.right2left_assoc_by[0][2] = NULL;
-	addition.left_assoc_by;
+	addition.left_assoc_by = NULL;
 	addition.comm = charAddComm;
 	addition.right_unit = "0";
 	addition.left_unit = "0";
@@ -713,11 +711,11 @@ Op *loadOps(Op *p)
 	subtraction.left2right_assoc_by[0][0] = NULL;
 	subtraction.left2right_assoc_by[0][1] = NULL;
 	subtraction.left2right_assoc_by[0][2] = NULL;
-	subtraction.right_assoc_by;
+	subtraction.right_assoc_by = NULL;
 	subtraction.right2left_assoc_by[0][0] = NULL;
 	subtraction.right2left_assoc_by[0][1] = NULL;
 	subtraction.right2left_assoc_by[0][2] = NULL;
-	subtraction.left_assoc_by;
+	subtraction.left_assoc_by = NULL;
 	subtraction.comm = NULL;
 	subtraction.right_unit = "0";
 	subtraction.left_unit = NULL;
@@ -759,11 +757,11 @@ Op *loadOps(Op *p)
 	multiplication.left2right_assoc_by[0][0] = NULL;
 	multiplication.left2right_assoc_by[0][1] = NULL;
 	multiplication.left2right_assoc_by[0][2] = NULL;
-	multiplication.right_assoc_by;
+	multiplication.right_assoc_by = NULL;
 	multiplication.right2left_assoc_by[0][0] = NULL;
 	multiplication.right2left_assoc_by[0][1] = NULL;
 	multiplication.right2left_assoc_by[0][2] = NULL;
-	multiplication.left_assoc_by;
+	multiplication.left_assoc_by = NULL;
 	multiplication.comm = charMultiplyComm;
 	multiplication.right_unit = "1";
 	multiplication.left_unit = "1";
@@ -793,11 +791,11 @@ Op *loadOps(Op *p)
 	division.left2right_assoc_by[0][0] = NULL;
 	division.left2right_assoc_by[0][1] = NULL;
 	division.left2right_assoc_by[0][2] = NULL;
-	division.right_assoc_by;
+	division.right_assoc_by = NULL;
 	division.right2left_assoc_by[0][0] = NULL;
 	division.right2left_assoc_by[0][1] = NULL;
 	division.right2left_assoc_by[0][2] = NULL;
-	division.left_assoc_by;
+	division.left_assoc_by = NULL;
 	division.comm = NULL;
 	division.right_unit = "1";
 	division.left_unit = NULL;
@@ -818,7 +816,9 @@ Op *loadOps(Op *p)
 	exponentiation.char_f_alt = NULL;
 	exponentiation.inverse = NULL;
 	exponentiation.left_dist_over[0] = NULL;
-	exponentiation.left_dist_over_by[0] = { " + ", " * ", NULL };
+	exponentiation.left_dist_over_by[0][0] = " + ";
+	exponentiation.left_dist_over_by[0][1] = " * ";
+	exponentiation.left_dist_over_by[0][2] = NULL;
 	exponentiation.left_dist_over_by[1][0] = NULL;
 	exponentiation.left_dist_over_by[1][1] = NULL;
 	exponentiation.left_dist_over_by[1][2] = NULL;
@@ -834,7 +834,9 @@ Op *loadOps(Op *p)
 	exponentiation.right_assoc = charExponenRightAssoc;
 	exponentiation.left2right_assoc = NULL;
 	exponentiation.right2left_assoc = NULL;
-	exponentiation.left2right_assoc_by[0] = { "^", " * ", NULL };
+	exponentiation.left2right_assoc_by[0][0] = "^";
+	exponentiation.left2right_assoc_by[0][1] = " * ";
+	exponentiation.left2right_assoc_by[0][2] = NULL;
 	exponentiation.left2right_assoc_by[1][0] = NULL;
 	exponentiation.left2right_assoc_by[1][1] = NULL;
 	exponentiation.left2right_assoc_by[1][2] = NULL;
@@ -842,7 +844,7 @@ Op *loadOps(Op *p)
 	exponentiation.right2left_assoc_by[0][0] = NULL;
 	exponentiation.right2left_assoc_by[0][1] = NULL;
 	exponentiation.right2left_assoc_by[0][2] = NULL;
-	exponentiation.left_assoc_by;
+	exponentiation.left_assoc_by = NULL;
 	exponentiation.comm = NULL;
 	exponentiation.right_unit = "1";
 	exponentiation.left_unit = NULL;
@@ -877,11 +879,11 @@ Op *loadOps(Op *p)
 	modulo.left2right_assoc_by[0][0] = NULL;
 	modulo.left2right_assoc_by[0][1] = NULL;
 	modulo.left2right_assoc_by[0][2] = NULL;
-	modulo.right_assoc_by;
+	modulo.right_assoc_by = NULL;
 	modulo.right2left_assoc_by[0][0] = NULL;
 	modulo.right2left_assoc_by[0][1] = NULL;
 	modulo.right2left_assoc_by[0][2] = NULL;
-	modulo.left_assoc_by;
+	modulo.left_assoc_by = NULL;
 	modulo.comm = NULL;
 	modulo.right_unit = NULL;
 	modulo.left_unit = NULL;
@@ -918,11 +920,11 @@ Op *loadOps(Op *p)
 	comma.left2right_assoc_by[0][0] = NULL;
 	comma.left2right_assoc_by[0][1] = NULL;
 	comma.left2right_assoc_by[0][2] = NULL;
-	comma.right_assoc_by;
+	comma.right_assoc_by = NULL;
 	comma.right2left_assoc_by[0][0] = NULL;
 	comma.right2left_assoc_by[0][1] = NULL;
 	comma.right2left_assoc_by[0][2] = NULL;
-	comma.left_assoc_by;
+	comma.left_assoc_by = NULL;
 	comma.comm = charCommaComm;
 	comma.right_unit = NULL;
 	comma.left_unit = NULL;
@@ -950,11 +952,11 @@ Op *loadOps(Op *p)
 	let.left2right_assoc_by[0][0] = NULL;
 	let.left2right_assoc_by[0][1] = NULL;
 	let.left2right_assoc_by[0][2] = NULL;
-	let.right_assoc_by;
+	let.right_assoc_by = NULL;
 	let.right2left_assoc_by[0][0] = NULL;
 	let.right2left_assoc_by[0][1] = NULL;
 	let.right2left_assoc_by[0][2] = NULL;
-	let.left_assoc_by;
+	let.left_assoc_by = NULL;
 	let.comm = NULL;
 	let.right_unit = NULL;
 	let.left_unit = NULL;
@@ -996,11 +998,11 @@ Op *loadOps(Op *p)
 	equal.left2right_assoc_by[0][0] = NULL;
 	equal.left2right_assoc_by[0][1] = NULL;
 	equal.left2right_assoc_by[0][2] = NULL;
-	equal.right_assoc_by;
+	equal.right_assoc_by = NULL;
 	equal.right2left_assoc_by[0][0] = NULL;
 	equal.right2left_assoc_by[0][1] = NULL;
 	equal.right2left_assoc_by[0][2] = NULL;
-	equal.left_assoc_by;
+	equal.left_assoc_by = NULL;
 	equal.comm = NULL;
 	equal.right_unit = NULL;
 	equal.left_unit = NULL;
@@ -1028,11 +1030,11 @@ Op *loadOps(Op *p)
 	less.left2right_assoc_by[0][0] = NULL;
 	less.left2right_assoc_by[0][1] = NULL;
 	less.left2right_assoc_by[0][2] = NULL;
-	less.right_assoc_by;
+	less.right_assoc_by = NULL;
 	less.right2left_assoc_by[0][0] = NULL;
 	less.right2left_assoc_by[0][1] = NULL;
 	less.right2left_assoc_by[0][2] = NULL;
-	less.left_assoc_by;
+	less.left_assoc_by = NULL;
 	less.comm = NULL;
 	less.right_unit = NULL;
 	less.left_unit = NULL;
@@ -1060,11 +1062,11 @@ Op *loadOps(Op *p)
 	leq.left2right_assoc_by[0][0] = NULL;
 	leq.left2right_assoc_by[0][1] = NULL;
 	leq.left2right_assoc_by[0][2] = NULL;
-	leq.right_assoc_by;
+	leq.right_assoc_by = NULL;
 	leq.right2left_assoc_by[0][0] = NULL;
 	leq.right2left_assoc_by[0][1] = NULL;
 	leq.right2left_assoc_by[0][2] = NULL;
-	leq.left_assoc_by;
+	leq.left_assoc_by = NULL;
 	leq.comm = NULL;
 	leq.right_unit = NULL;
 	leq.left_unit = NULL;
@@ -1092,11 +1094,11 @@ Op *loadOps(Op *p)
 	greater.left2right_assoc_by[0][0] = NULL;
 	greater.left2right_assoc_by[0][1] = NULL;
 	greater.left2right_assoc_by[0][2] = NULL;
-	greater.right_assoc_by;
+	greater.right_assoc_by = NULL;
 	greater.right2left_assoc_by[0][0] = NULL;
 	greater.right2left_assoc_by[0][1] = NULL;
 	greater.right2left_assoc_by[0][2] = NULL;
-	greater.left_assoc_by;
+	greater.left_assoc_by = NULL;
 	greater.comm = NULL;
 	greater.right_unit = NULL;
 	greater.left_unit = NULL;
@@ -1124,11 +1126,11 @@ Op *loadOps(Op *p)
 	geq.left2right_assoc_by[0][0] = NULL;
 	geq.left2right_assoc_by[0][1] = NULL;
 	geq.left2right_assoc_by[0][2] = NULL;
-	geq.right_assoc_by;
+	geq.right_assoc_by = NULL;
 	geq.right2left_assoc_by[0][0] = NULL;
 	geq.right2left_assoc_by[0][1] = NULL;
 	geq.right2left_assoc_by[0][2] = NULL;
-	geq.left_assoc_by;
+	geq.left_assoc_by = NULL;
 	geq.comm = NULL;
 	geq.right_unit = NULL;
 	geq.left_unit = NULL;
@@ -1156,11 +1158,11 @@ Op *loadOps(Op *p)
 	neq.left2right_assoc_by[0][0] = NULL;
 	neq.left2right_assoc_by[0][1] = NULL;
 	neq.left2right_assoc_by[0][2] = NULL;
-	neq.right_assoc_by;
+	neq.right_assoc_by = NULL;
 	neq.right2left_assoc_by[0][0] = NULL;
 	neq.right2left_assoc_by[0][1] = NULL;
 	neq.right2left_assoc_by[0][2] = NULL;
-	neq.left_assoc_by;
+	neq.left_assoc_by = NULL;
 	neq.comm = NULL;
 	neq.right_unit = NULL;
 	neq.left_unit = NULL;

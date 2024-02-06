@@ -553,7 +553,8 @@ Expr *refreshExprNode(Expr *p)
 	return p;
 }
 
-/* altExpr: x - y => x + -1 * y, etc. */
+/* altExpr: x - y ==> x + -1 * y, etc. */
+// x / y ==> x * y^-1
 Expr *_altExpr(Expr *p)
 {
 	char *prog = "_altExpr";
@@ -613,9 +614,143 @@ void testaltExpr(void)
 	printf("---\n");
 }
 
+/* expExpr: exponent laws */
+Expr *_expExpr(Expr *p)
+{
+	char *prog = "_expExpr";
 
+	if (p->left == NULL || p-> right == NULL)
+		return p;
 
+	if (strcmp(p->op, "") == 0)
+		return p;
 
+	// x^(a + b) or (x^a)^b
+	// p->op = "^"
+	// check
+	//       left2right_assoc_by
+	//       right2left_assoc_by
+	//       left_dist_over_by
+	//       right_dist_over_by
+	//
+	//       left2right_assoc_by[0] = { "^", " * " }
+	//       check p->left->op = "^"
+	//             use " * " in op->right_assoc_by
+	//       left_dist_over_by[0] = { " + ", " * " }
+	//       check p->right->op = " + "
+	//             use " * " in op->left_dist_over_char_f
+	// (x^a)^(b + c)
+
+	Op *op = getOp(op_tree, p->op);
+	char line[MAXCHAR] = "", left[MAXCHAR] = "", right[MAXCHAR] = "";
+	char left_left[MAXCHAR] = "", left_right[MAXCHAR] = "", right_left[MAXCHAR] = "", right_right[MAXCHAR] = "";
+	int i, j = -1;
+
+	if (op->left2right_assoc_by[0][0] != NULL && strlen(line) == 0) {
+		/* (x^a)^b ==> x^(a * b) */
+		for (i=0; op->left2right_assoc_by[i][0] != NULL; i++)
+			if (strcmp(p->left->op, op->left2right_assoc_by[i][0]) == 0) {
+				j = i;
+				break;
+			}
+		if (j != -1) {
+			char *op2 = op->left2right_assoc_by[j][1];
+			strcpy(right, p->right->name);
+			if (strlen(p->right->op) > 0)
+				parenthstr(right);
+			parseExprLeft(left_left, p->left->name, getOp(op_tree, p->left->op), block_start, block_end);
+			parseExprRight(left_right, p->left->name, getOp(op_tree, p->left->op), block_start, block_end);
+			op->right_assoc_by(line, left_left, left_right, right, op2);
+		}
+	}
+	if (op->right2left_assoc_by[0][0] != NULL && strlen(line) == 0) {
+		for (i=0; op->right2left_assoc_by[i][0] != NULL; i++)
+			if (strcmp(p->right->op, op->right2left_assoc_by[i][0]) == 0) {
+				j = i;
+				break;
+			}
+		if (j != -1) {
+			char *op2 = op->right2left_assoc_by[j][1];
+			strcpy(left, p->left->name);
+			if (strlen(p->left->op) > 0)
+				parenthstr(left);
+			parseExprLeft(right_left, p->right->name, getOp(op_tree, p->right->op), block_start, block_end);
+			parseExprRight(right_right, p->right->name, getOp(op_tree, p->right->op), block_start, block_end);
+			op->left_assoc_by(line, left, right_left, right_right, op2);
+		}
+	}
+	if (op->left_dist_over_by[0][0] != NULL && strlen(line) == 0) {
+		/* x^(a + b) ==> x^a * x^b */
+		for (i=0; op->left_dist_over_by[i][0] != NULL; i++)
+			if (strcmp(p->right->op, op->left_dist_over_by[i][0]) == 0) {
+				j = i;
+				break;
+			}
+		if (j != -1) {
+			char *op2 = op->left_dist_over_by[j][1];
+			strcpy(left, p->left->name);
+			if (strlen(p->left->op) > 0)
+				parenthstr(left);
+			parseExprLeft(right_left, p->right->name, getOp(op_tree, p->right->op), block_start, block_end);
+			parseExprRight(right_right, p->right->name, getOp(op_tree, p->right->op), block_start, block_end);
+			op->left_dist_over_char_f(line, left, right_left, right_right, op2);
+		}
+	}
+	if (op->right_dist_over_by[0][0] != NULL && strlen(line) == 0) {
+		for (i=0; op->right_dist_over_by[i][0] != NULL; i++)
+			if (strcmp(p->left->op, op->right_dist_over_by[i][0]) == 0) {
+				j = i;
+				break;
+			}
+		if (j != -1) {
+			char *op2 = op->right_dist_over_by[j][1];
+			strcpy(right, p->right->name);
+			if (strlen(p->right->op) > 0)
+				parenthstr(right);
+			parseExprLeft(left_left, p->left->name, getOp(op_tree, p->left->op), block_start, block_end);
+			parseExprRight(left_right, p->left->name, getOp(op_tree, p->left->op), block_start, block_end);
+			op->right_dist_over_char_f(line, right, left_left, left_right, op2);
+		}
+	}
+
+	if (strlen(line) > 0) {
+		removeExpr(&p);
+		p = addExpr(p, line);
+	}
+
+	p->left = _expExpr(p->left);
+	p->right = _expExpr(p->right);
+
+	return p;
+}
+Expr *expExpr(Expr *p)
+{
+	p = _expExpr(p);
+	p = refreshExpr(p);
+
+	return p;
+}
+void testexpExpr(void)
+{
+	char *line = "(x^a)^b";
+	line = "x^(a + b)";
+	line = "(x^(a + b))^(c + d)";
+	Expr *p = NULL;
+	op_tree = loadOps(op_tree);
+
+	p = addExpr(p, line);
+
+	printf("original\n");
+	listExpr(p);
+	printf("---\n");
+
+	printf("testexpExpr\n");
+	p = expExpr(p);
+	listExpr(p);
+	printf("---\n");
+}
+
+/* distExpr: x * (a - b) ==> x * a - x * b */
 Expr *_distExpr(Expr *p)
 {
 	char *prog = "_distExpr";
