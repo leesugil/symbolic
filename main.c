@@ -40,7 +40,7 @@ int main(int argc, char *argv[])
 	//expr = evalExpr(expr);
 	expr = altExpr(expr);
 	expr = distExpr(expr);
-	//expr = commExpr(expr);
+	expr = commExpr(expr);
 	//expr = calcExpr(expr);
 	//printf("%s\n", expr->name);
 
@@ -73,12 +73,10 @@ int main(int argc, char *argv[])
 	expr = distExpr(expr);
 	listExpr(expr);
 	printf("---\n");
-	/*
 	printf("commutated expr:\n");
 	expr = commExpr(expr);
 	listExpr(expr);
 	printf("---\n");
-	*/
 	/*
 	printf("calculated expr:\n");
 	expr = calcExpr(expr);
@@ -117,12 +115,10 @@ int main(int argc, char *argv[])
 		expr = distExpr(expr);
 		listExpr(expr);
 		printf("---\n");
-		/*
 		printf("commutated expr:\n");
 		expr = commExpr(expr);
 		listExpr(expr);
 		printf("---\n");
-		*/
 		/*
 		printf("calculated expr:\n");
 		expr = calcExpr(expr);
