@@ -107,14 +107,22 @@ int main(int argc, char *argv[])
 		listExpr(expr);
 		printf("---\n");
 		*/
+
 		printf("alternate expr:\n");
 		expr = altExpr(expr);
 		listExpr(expr);
 		printf("---\n");
+
 		printf("distributed expr:\n");
 		expr = distExpr(expr);
 		listExpr(expr);
 		printf("---\n");
+
+		printf("exponent law-ed expr:\n");
+		expr = expExpr(expr);
+		listExpr(expr);
+		printf("---\n");
+
 		printf("commutated expr:\n");
 		expr = commExpr(expr);
 		listExpr(expr);

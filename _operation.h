@@ -27,6 +27,7 @@ extern void parseExprRight(char [], char *, Op *, char **, char **);
 struct Op {
 	/* assume binary */
 	char *name;							// like " + "
+	int order;							// calculation higherarchy
 	char *short_name;					// like "+"
 	BinaryFunctionPointer f;			// like add(x, y)
 	BinaryCharFunctionPointer char_f;	// like charAdd(w, x, y)
@@ -67,10 +68,12 @@ Op *updateOp(Op *p, Op op);
 Op *addOp(Op *p, Op op)
 {
 	int cond;
+	static int n = 0;
 
 	if (p == NULL) {
 		p = opAlloc();
 		p->name = strdup(op.name);
+		p->order = ++n;
 		p->short_name = strdup(op.short_name);
 		p->f = op.f;
 		p->char_f = op.char_f;
@@ -720,9 +723,6 @@ Op *loadOps(Op *p)
 	subtraction.right_unit = "0";
 	subtraction.left_unit = NULL;
 
-	p = addOp(p, addition);
-	p = addOp(p, subtraction);
-
 
 	/***************************
 	 * multiplication and division
@@ -800,9 +800,6 @@ Op *loadOps(Op *p)
 	division.right_unit = "1";
 	division.left_unit = NULL;
 
-	p = addOp(p, multiplication);
-	p = addOp(p, division);
-
 
 	/***************************
 	 * exponentiation
@@ -852,7 +849,6 @@ Op *loadOps(Op *p)
 	exponentiation.right_unit = "1";
 	exponentiation.left_unit = NULL;
 
-	p = addOp(p, exponentiation);
 
 	/***************************
 	 * modulo arithmetic
@@ -890,8 +886,6 @@ Op *loadOps(Op *p)
 	modulo.comm = NULL;
 	modulo.right_unit = NULL;
 	modulo.left_unit = NULL;
-
-	p = addOp(p, modulo);
 
 
 	/***************************
@@ -963,9 +957,6 @@ Op *loadOps(Op *p)
 	let.comm = NULL;
 	let.right_unit = NULL;
 	let.left_unit = NULL;
-
-	p = addOp(p, comma);
-	p = addOp(p, let);
 
 
 	/***************************
@@ -1170,6 +1161,10 @@ Op *loadOps(Op *p)
 	neq.right_unit = NULL;
 	neq.left_unit = NULL;
 
+
+	p = addOp(p, comma);
+	p = addOp(p, let);
+	
 	p = addOp(p, equal);
 	p = addOp(p, less);
 	p = addOp(p, leq);
@@ -1177,6 +1172,12 @@ Op *loadOps(Op *p)
 	p = addOp(p, geq);
 	p = addOp(p, neq);
 
+	p = addOp(p, subtraction);
+	p = addOp(p, addition);
+	p = addOp(p, division);
+	p = addOp(p, multiplication);
+	p = addOp(p, exponentiation);
+	p = addOp(p, modulo);
 
 
 

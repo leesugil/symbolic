@@ -413,24 +413,30 @@ void testparseExprLeft(void)
 }
 
 /* parenthExprLeft: given a parsed left, determine if parentheses are needed */
-void parenthExprLeft(char left[], Expr *p)
+int parenthExprLeft(char left[], Expr *p)
 {
 	char *prog = "parenthExprLeft";
 
 	if (p == NULL)
-		return;
+		return 0;
 	Op *op = getOp(op_tree, p->op);
 	// determine if parentheses are needed
 	if (p->left == NULL)
-		return;
+		return 0;
 	for (int k = 0; op->right_dist_over[k] != NULL; k++)
-		if (strcmp(op->right_dist_over[k], p->left->op) == 0)
+		if (strcmp(op->right_dist_over[k], p->left->op) == 0) {
 			parenthstr(left);
+			return 1;
+		}
 	if (op->right_assoc != NULL && op->left_assoc == NULL)
-		if (strcmp(p->op, p->left->op) == 0)
+		if (strcmp(p->op, p->left->op) == 0) {
 			parenthstr(left);			/* because otherwise
 										   x^y^z == z^(y^z)
 											  ^             */
+			return 1;
+		}
+
+	return 0;
 }
 
 /* parseExprRight: if undetected, w = "" */
@@ -492,24 +498,30 @@ void testparseExprRight(void)
 }
 
 /* parenthExprRight: given a parsed right, determine if parentheses are needed */
-void parenthExprRight(char right[], Expr *p)
+int parenthExprRight(char right[], Expr *p)
 {
 	char *prog = "parenthExprRight";
 
 	if (p == NULL)
-		return;
+		return 0;
 	Op *op = getOp(op_tree, p->op);
 	// determine if parentheses are needed
 	if (p->right == NULL)
-		return;
+		return 0;
 	for (int k = 0; op->left_dist_over[k] != NULL; k++)
-		if (strcmp(op->left_dist_over[k], p->right->op) == 0)
+		if (strcmp(op->left_dist_over[k], p->right->op) == 0) {
 			parenthstr(right);
+			return 1;
+		}
 	if (op->left_assoc != NULL && op->right_assoc == NULL)
-		if (strcmp(p->op, p->right->op) == 0)
+		if (strcmp(p->op, p->right->op) == 0) {
 			parenthstr(right);			/* because otherwise
 										   x/y/z == (x/y)/z
 											^               */
+			return 1;
+		}
+
+	return 0;
 }
 
 /* listExpr: in-order print of tree p */
@@ -552,6 +564,17 @@ void removeExpr(Expr **p)
 	*p = NULL;
 }
 
+void testaddExpr(void)
+{
+	char *line = "y^(-1 * b)";
+	op_tree = loadOps(op_tree);
+	Expr *p = NULL;
+
+	printf("%s\n", line);
+	p = addExpr(p, line);
+	listExpr(p);
+}
+
 Expr *refreshExprNode(Expr *p);
 /* refreshExpr: refresh node names (and other necessary things) based on reading p->left and p->right. postorder traversal. */
 // needed after distExpr
@@ -579,6 +602,8 @@ void testrefreshExpr(void)
 		"a / b / c",
 		"(a / b) / c",
 		"a / (b / c)",
+		"a - (b - c)",
+		"(a - b) - c",
 		NULL
 	};
 	Expr *p = NULL;
@@ -605,29 +630,45 @@ Expr *refreshExprNode(Expr *p)
 		return p;
 
 	Op *op = getOp(op_tree, p->op);
+	Op *op2 = NULL;
+	Expr *q = NULL;
 
 	char line[MAXCHAR] = "";
 	strcpy(line, p->left->name);
 	for (int i = 0; op->right_dist_over[i] != NULL; i++)
 		if (strcmp(op->right_dist_over[i], p->left->op) == 0)
 			parenthstr(line);
-	if (op->right_assoc != NULL && op->left_assoc == NULL)
-		if (strcmp(p->op, p->left->op) == 0)
+	if (strcmp(p->op, p->left->op) == 0)
+		if (op->right_assoc != NULL && op->left_assoc == NULL)
 			parenthstr(line);			/* because otherwise
 										   x^y^z == z^(y^z)
 										      ^             */
+	q = addExpr(q, line);
+	op2 = getOp(op_tree, q->op);
+	removeExpr(&q);
+	if (op2 != NULL && op2->order < op->order)
+		parenthstr(line);
 	strcpy(p->name, line);
 	strcat(p->name, p->op);
 	strcpy(line, p->right->name);
 	for (int i = 0; op->left_dist_over[i] != NULL; i++)
 		if (strcmp(op->left_dist_over[i], p->right->op) == 0)
 			parenthstr(line);
-	if (op->left_assoc != NULL && op->right_assoc == NULL)
-		if (strcmp(p->op, p->right->op) == 0)
+	if (strcmp(p->op, p->right->op) == 0)
+		if (op->left_assoc != NULL && op->right_assoc == NULL)
 			parenthstr(line);			/* because otherwise
 										   x/y/z == (x/y)/z
 										    ^               */
+	q = addExpr(q, line);
+	op2 = getOp(op_tree, q->op);
+	removeExpr(&q);
+	if (op2 != NULL && op2->order < op->order)
+		parenthstr(line);
 	strcat(p->name, line);
+
+	/* issues:
+	 * x^a * (x^b)
+	 * */
 
 	return p;
 }
@@ -1154,7 +1195,6 @@ Expr *_commExpr(Expr *p)
 			// parseExprRight??
 			parenthExprLeft(y, p);
 			op->char_f(line, x, y);
-			printf("***%s***\n", line);
 			p = _commExprReduce(p, line);
 			length = treeLength(p);
 			if (length < best_length) {
@@ -1523,35 +1563,6 @@ Expr *_calcExprMult(Expr *p)
 					strcpy(p->name, "1");
 					p->op[0] = '\0';
 				}
-	}
-
-	return p;
-}
-Expr *_calcExprMult2(Expr *p)
-{
-	char *prog = "_calcExprMult";
-
-	char *op_name = " * ";
-
-	if (p == NULL)
-		return NULL;
-
-	fprintf(stderr, "%s: p->op:%s\n", prog, p->op);
-	if (strcmp(p->op, op_name) == 0) {
-		char *leftp = NULL;
-		double left = strtod(p->left->name, &leftp);	// p != NULL => p->left != NULL
-		fprintf(stderr, "%s: leftp:%s\n", prog, leftp);
-		if (strlen(leftp) == 0) {			// p->left is a number
-			char *rightp = NULL;
-			double right = strtod(p->right->name, &rightp);
-			fprintf(stderr, "%s: rightp:%s\n", prog, rightp);
-			if (strlen(rightp) == 0) {
-				/* double-to-str */
-				double output = left * right;
-				sprintf(p->name, "%g", output);
-				p->op[0] = '\0';
-			}
-		}
 	}
 
 	return p;
