@@ -79,7 +79,7 @@ void testupdateSymb(void)
  * and then keep proceeding to the updated q->left, q->right */
 /* parseExpr added */
 
-Expr *updateExpr(Expr *p, Symb *root)
+Expr *_updateExpr(Expr *p, Symb *root)
 {
 	char *prog = "updateExpr";
 
@@ -98,8 +98,14 @@ Expr *updateExpr(Expr *p, Symb *root)
 		}
 	}
 
-	updateExpr(p->left, root);
-	updateExpr(p->right, root);
+	p->left = _updateExpr(p->left, root);
+	p->right = _updateExpr(p->right, root);
+
+	return p;
+}
+Expr *updateExpr(Expr *p, Symb *root) {
+	p = _updateExpr(p, root);
+	p = refreshExpr(p);
 
 	return p;
 }
@@ -127,32 +133,5 @@ void testupdateExpr(void)
 	listExpr(p);
 }
 
-void testrefreshExpr2(void)
-{
-	Symb *root = NULL;
-	Expr *p = NULL;
-
-	char *line = NULL;
-	line = "x = 5, y = 6, f = (x + y), g = f / z";
-	p = addExpr(p, line);
-	printf("symbol registration\n");
-	listExpr(p);
-	root = updateSymb(root, p);
-	printf("\nsymbol tree\n");
-	listSymb(root);
-	
-	removeExpr(&p);
-	line = "x * (f * z)^g";
-	p = addExpr(p, line);
-	printf("\nmath expression (before)\n");
-	listExpr(p);
-	p = updateExpr(p, root);
-	printf("\nmath expression (after)\n");
-	listExpr(p);
-
-	p = refreshExpr(p);
-	printf("\nevaluated math expression (after)\n");
-	listExpr(p);
-}
 
 #endif	/* _SYMBOLIC_H */
