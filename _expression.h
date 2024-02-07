@@ -518,16 +518,28 @@ void testrefreshExpr(void)
 {
 	//char line[MAXCHAR] = "(x + ((x + y) + (y + z)))";
 	//char line[MAXCHAR] = "a * x^2 + b * x^1 + c * x^0";
-	char line[MAXCHAR] = "(x + x * (a - b) - x * (a + b) * y / a * b \% e)";
+	char line[MAXCHAR] = "(x + x * (a - b) - x * (a + b) * y / a * b \% e)";	
+	char *test_lines[] = {
+		"x^y^z",
+		"(x^y)^z",
+		"x^(y^z)",
+		"a / b / c",
+		"(a / b) / c",
+		"a / (b / c)",
+		NULL
+	};
 	Expr *p = NULL;
 	op_tree = loadOps(op_tree);
 
-	p = addExpr(p, line);
-	printf("\nrefreshExpr (before)\n");
-	listExpr(p);
-	p = refreshExpr(p);
-	printf("\nrefreshExpr (after)\n");
-	listExpr(p);
+	for (int i = 0; test_lines[i] != NULL; i++) {
+		removeExpr(&p);
+		p = addExpr(p, test_lines[i]);
+		printf("\nrefreshExpr (before)\n");
+		listExpr(p);
+		printf("\nrefreshExpr (after)\n");
+		p = refreshExpr(p);
+		listExpr(p);
+	}
 }
 
 /* refreshExprNode: used to update p->name when changes are made postorder traversal */
@@ -546,18 +558,22 @@ Expr *refreshExprNode(Expr *p)
 	for (int i = 0; op->right_dist_over[i] != NULL; i++)
 		if (strcmp(op->right_dist_over[i], p->left->op) == 0)
 			parenthstr(line);
-	if (op->left_assoc != NULL && op->right_assoc == NULL)
-		if (strcmp(p->op, p->left->op) == 0)	/* x/y/z = (x/y)/z */
-			parenthstr(line);
+	if (op->right_assoc != NULL && op->left_assoc == NULL)
+		if (strcmp(p->op, p->left->op) == 0)
+			parenthstr(line);			/* because otherwise
+										   x^y^z == z^(y^z)
+										      ^             */
 	strcpy(p->name, line);
 	strcat(p->name, p->op);
 	strcpy(line, p->right->name);
 	for (int i = 0; op->left_dist_over[i] != NULL; i++)
 		if (strcmp(op->left_dist_over[i], p->right->op) == 0)
 			parenthstr(line);
-	if (op->right_assoc != NULL && op->left_assoc == NULL)
-		if (strcmp(p->op, p->right->op) == 0)	/* x^y^z = x^(y^z) */
-			parenthstr(line);
+	if (op->left_assoc != NULL && op->right_assoc == NULL)
+		if (strcmp(p->op, p->right->op) == 0)
+			parenthstr(line);			/* because otherwise
+										   x/y/z == (x/y)/z
+										    ^               */
 	strcat(p->name, line);
 
 	return p;
