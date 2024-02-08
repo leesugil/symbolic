@@ -10,7 +10,7 @@ Expr *processExpr(Expr *p);
 int main()
 {
 	op_tree = loadOps(op_tree);
-	Op *op = getOp(op_tree, "^");
+	symb_tree = loadSymb(symb_tree);
 	Expr *p = NULL;
 	char line[MAXCHAR] = "";
 
@@ -44,10 +44,10 @@ int main()
 		}
 		/* render */
 		fill_rect(1, 1, 70, 9, ' ');
-		print_at(3, 7, "output: %s", p->name);
-		print_at(3, 3, "intput:");
 		draw_rect(1, 1, 70, 5, '*');
 		draw_rect(1, 5, 70, 9, '*');
+		print_at(3, 7, "output: %s", p->name);
+		print_at(3, 3, "intput:");
 
 		move_to(11, 3);
 	}

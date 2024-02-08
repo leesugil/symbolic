@@ -3,4 +3,6 @@
 
 #include "_symbol.h"
 
+Symb *loadSymb(Symb *s);
+
 #endif	/* SYMBOL_H */

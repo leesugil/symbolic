@@ -125,4 +125,10 @@ void removeSymb(Symb **p)
 	*p = NULL;
 }
 
+/* run at the beginning of the code to pre-load symbols */
+Symb *loadSymb(Symb *s)
+{
+	return s;
+}
+
 #endif	/* _SYMBOL_H */
