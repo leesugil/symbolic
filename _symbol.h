@@ -8,6 +8,8 @@
 
 typedef struct Symb Symb;
 
+Symb *symb_tree = NULL;
+
 struct Symb {
 	char *name;
 	char formula[MAXCHAR];

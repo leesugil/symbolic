@@ -567,6 +567,7 @@ void removeExpr(Expr **p)
 void testaddExpr(void)
 {
 	char *line = "y^(-1 * b)";
+	line = "4^-2";
 	op_tree = loadOps(op_tree);
 	Expr *p = NULL;
 
@@ -1473,6 +1474,11 @@ Expr *evalExpr(Expr *p)
 	p = _calcExprPow(p);
 	p = _calcExprMod(p);
 
+	char line[MAXCHAR] = "";
+	strcpy(line, p->name);
+	removeExpr(&p);
+	p = addExpr(p, line);
+
 	return p;
 }
 void testevalExpr(void)
@@ -1484,7 +1490,9 @@ void testevalExpr(void)
 	//char *line = "-1 * 3 * a * 2^2 * 7 * -1";
 	//char *line = "-2 * (a + b) * -1";
 	char *line = "-1 * 2 * 3^2 * 4";
+	line = "4^-2";
 	Expr *p = NULL;
+	op_tree = loadOps(op_tree);
 
 	p = addExpr(p, line);
 
@@ -1528,6 +1536,13 @@ Expr *_calcExprMult(Expr *p)
 				p = addExpr(p, line);
 				return p;
 			}
+			/* 0 * x = 0 */
+			if (strcmp(p->left->name, "0") == 0) {
+				/* unit */
+				removeExpr(&p);
+				p = addExpr(p, "0");
+				return p;
+			}
 			int c = is_pure_number(p->right->name, NULL);
 			char *q = NULL;
 			double value = strtod(p->right->name, &q);
@@ -1553,6 +1568,7 @@ Expr *_calcExprMult(Expr *p)
 						strcmp(p->left->name, p->right->left->name) == 0) {
 					strcpy(p->name, "1");
 					p->op[0] = '\0';
+					return p;
 				}
 		/* x^-1 * x */
 		if (is_pure_number(p->right->name, NULL) == 0)
@@ -1562,6 +1578,7 @@ Expr *_calcExprMult(Expr *p)
 						strcmp(p->right->name, p->left->left->name) == 0) {
 					strcpy(p->name, "1");
 					p->op[0] = '\0';
+					return p;
 				}
 	}
 
@@ -1632,6 +1649,7 @@ Expr *_calcExprAdd(Expr *p)
 						strcmp(p->left->name, p->right->right->name) == 0) {
 					strcpy(p->name, "0");
 					p->op[0] = '\0';
+					return p;
 				}
 		/* -1 * x + x */
 		if (is_pure_number(p->right->name, NULL) == 0)
@@ -1641,6 +1659,7 @@ Expr *_calcExprAdd(Expr *p)
 						strcmp(p->right->name, p->left->right->name) == 0) {
 					strcpy(p->name, "0");
 					p->op[0] = '\0';
+					return p;
 				}
 	}
 
@@ -1674,12 +1693,26 @@ Expr *_calcExprSub(Expr *p)
 }
 Expr *_calcExprPow(Expr *p)
 {
-	char *prog = "_calcExprSub";
+	char *prog = "_calcExprPow";
 
 	char *op_name = "^";
 
 	fprintf(stderr, "%s: p->op:%s\n", prog, p->op);
 	if (strcmp(p->op, op_name) == 0) {
+		/* x^1 = x */
+		if (strcmp(p->right->name, "1") == 0) {
+			char line[MAXCHAR] = "";
+			strcpy(line, p->left->name);
+			removeExpr(&p);
+			p = addExpr(p, line);
+			return p;
+		}
+		/* x^0 = 1 */
+		if (strcmp(p->right->name, "0") == 0) {
+			removeExpr(&p);
+			p = addExpr(p, "1");
+			return p;
+		}
 		char *leftp = NULL;
 		double left = strtod(p->left->name, &leftp);
 		fprintf(stderr, "%s: leftp:%s\n", prog, leftp);

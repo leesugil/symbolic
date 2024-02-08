@@ -9,6 +9,7 @@
 
 #include "symbolic.h"
 #include "qol/c/getword.h"
+#include "plot/ansi.h"
 
 int main(int argc, char *argv[])
 {

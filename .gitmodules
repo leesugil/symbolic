@@ -1,3 +1,6 @@
 [submodule "qol"]
 	path = qol
 	url = https://github.com/leesugil/qol.git
+[submodule "plot"]
+	path = plot
+	url = https://github.com/leesugil/plot.git
