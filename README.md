@@ -2,7 +2,7 @@
 Symbolic calculator for arithmetic operations with fractions
 
 ## Update Log
-<img src="title.png" width="600" alt="Title Image with Size">
+<img src="title.png" width="400" alt="Title Image with Size">
 
 ### WIP
 Consider the example:
