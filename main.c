@@ -1,141 +1,79 @@
-/* Symbolic Arithmetic */
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <ctype.h>
-#include <math.h>
-#include <complex.h>
 
 #include "symbolic.h"
-#include "qol/c/getword.h"
 #include "plot/ansi.h"
 
-int main(int argc, char *argv[])
+Expr *processExpr(Expr *p);
+
+int main()
 {
 	op_tree = loadOps(op_tree);
+	Op *op = getOp(op_tree, "^");
+	Expr *p = NULL;
+	char line[MAXCHAR] = "";
 
-	char *line = NULL;
-	Symb *symb = NULL;
-	Expr *expr = NULL;
+	/* load pre-load lines */
+	FILE *fp;
+	FILE *fopen(const char *, const char *);
+	fp = fopen("preload.txt", "r");
+	fgets(line, MAXCHAR, fp);
+	p = addExpr(p, line);
+	p = processExpr(p);
+	removeExpr(&p);
+	p = addExpr(p, "g");
+	p = processExpr(p);
 
-	/* one cycle */
-	removeExpr(&expr);
-	/*line = "f = a * x^2 + b * x^1 + c * x^0, "
-			"g = y * f, "
-			"h = g * z, "
-			"i = -1 * h, "
-			"j = i * -1, "
-			"x = 2, "
-			"y = 3, "
-			"z = 7";*/
-	/*
-	line = "f = (a - b) * c, "
-		"a = 1, "
-		"b = 1";
-	*/
-	line = "f = (x * y)^a - (x / y)^b";
-	expr = addExpr(expr, line);
-	symb = updateSymb(symb, expr);
-	expr = updateExpr(expr, symb);
-	//expr = evalExpr(expr);
-	expr = altExpr(expr);
-	expr = distExpr(expr);
-	expr = commExpr(expr);
-	//expr = calcExpr(expr);
-	//printf("%s\n", expr->name);
+	clear();
+	print_at(3, 3, "intput:");
+	draw_rect(1, 1, 70, 5, '*');
+	move_to(11, 3);
 
-	/* one cycle */
-	removeExpr(&expr);
-	line = "f";
-	printf("original expr:\n");
-	expr = addExpr(expr, line);
-	listExpr(expr);
-	printf("---\n");
-	printf("symbols:\n");
-	symb = updateSymb(symb, expr);
-	listSymb(symb);
-	printf("---\n");
-	printf("updated expr with symbols:\n");
-	expr = updateExpr(expr, symb);
-	listExpr(expr);
-	printf("---\n");
-	/*
-	printf("evaluated expr:\n");
-	expr = evalExpr(expr);
-	listExpr(expr);
-	printf("---\n");
-	*/
-	printf("alternate expr:\n");
-	expr = altExpr(expr);
-	listExpr(expr);
-	printf("---\n");
-	printf("distributed expr:\n");
-	expr = distExpr(expr);
-	listExpr(expr);
-	printf("---\n");
-	printf("commutated expr:\n");
-	expr = commExpr(expr);
-	listExpr(expr);
-	printf("---\n");
-	/*
-	printf("calculated expr:\n");
-	expr = calcExpr(expr);
-	listExpr(expr);
-	printf("---\n");
-	printf("%s\n", expr->name);
-	*/
-
-	line = NULL;
+	char *s = NULL;
 	size_t maxline = 0;
-	while (getline(&line, &maxline, stdin) > 0) {
-		removeExpr(&expr);
-		printf("original expr:\n");
-		expr = addExpr(expr, line);
-		listExpr(expr);
-		printf("---\n");
-		printf("symbols:\n");
-		symb = updateSymb(symb, expr);
-		listSymb(symb);
-		printf("---\n");
-		printf("updated expr with symbols:\n");
-		expr = updateExpr(expr, symb);
-		listExpr(expr);
-		printf("---\n");
-		/*
-		printf("evaluated expr:\n");
-		expr = evalExpr(expr);
-		listExpr(expr);
-		printf("---\n");
-		*/
+	while (getline(&s, &maxline, stdin) > 0) {
+		removeExpr(&p);
+		p = addExpr(p, s);
+		p = processExpr(p);
+		if (strcmp(p->op, ", ") != 0 &&
+				strcmp(p->op, " = ") != 0) {
+			clear();
+			move_to(3, 11);
+			listExpr(p);
+		}
+		/* render */
+		fill_rect(1, 1, 70, 9, ' ');
+		print_at(3, 7, "output: %s", p->name);
+		print_at(3, 3, "intput:");
+		draw_rect(1, 1, 70, 5, '*');
+		draw_rect(1, 5, 70, 9, '*');
 
-		printf("alternate expr:\n");
-		expr = altExpr(expr);
-		listExpr(expr);
-		printf("---\n");
-
-		printf("distributed expr:\n");
-		expr = distExpr(expr);
-		listExpr(expr);
-		printf("---\n");
-
-		printf("exponent law-ed expr:\n");
-		expr = expExpr(expr);
-		listExpr(expr);
-		printf("---\n");
-
-		printf("commutated expr:\n");
-		expr = commExpr(expr);
-		listExpr(expr);
-		printf("---\n");
-		/*
-		printf("calculated expr:\n");
-		expr = calcExpr(expr);
-		listExpr(expr);
-		printf("---\n");
-		printf("%s\n", expr->name);
-		*/
+		move_to(11, 3);
 	}
 
-	exit(0);
+	/* render */
+	//clear();
+}
+
+Expr *processExpr(Expr *p)
+{
+	if (p == NULL)
+		return NULL;
+
+	symb_tree = updateSymb(symb_tree, p);
+	p = updateExpr(p, symb_tree);
+
+	char prev_p[MAXCHAR] = "";
+	do {
+		strcpy(prev_p, p->name);
+		p = evalExpr(p);
+		p = altExpr(p);
+		p = distExpr(p);
+		p = expExpr(p);
+		p = commExpr(p);
+		p = evalExpr(p);
+	} while (strcmp(prev_p, p->name) != 0);
+
+	return p;
 }
