@@ -2,6 +2,7 @@
 Symbolic calculator for arithmetic operations with fractions
 
 ## Update Log
+![Title Image](title.png "Title Image")
 
 ### WIP
 Consider the example:
