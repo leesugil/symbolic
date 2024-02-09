@@ -20,10 +20,8 @@ int main()
 	fp = fopen("preload.txt", "r");
 	fgets(line, MAXCHAR, fp);
 	p = addExpr(p, line);
-	p = processExpr(p);
+	symb_tree = updateSymb(symb_tree, p);
 	removeExpr(&p);
-	p = addExpr(p, "g");
-	p = processExpr(p);
 
 	clear();
 	print_at(3, 3, "intput:");
@@ -46,14 +44,17 @@ int main()
 		fill_rect(1, 1, 70, 9, ' ');
 		draw_rect(1, 1, 70, 5, '*');
 		draw_rect(1, 5, 70, 9, '*');
-		print_at(3, 7, "output: %s", p->name);
+		print_at(3, 7, "output: ");
+		if (strcmp(p->op, ", ") != 0 &&
+				strcmp(p->op, " = ") != 0)
+			print_at(11, 7, "%s", p->name);
 		print_at(3, 3, "intput:");
 
 		move_to(11, 3);
 	}
 
 	/* render */
-	//clear();
+	clear();
 }
 
 Expr *processExpr(Expr *p)
@@ -69,8 +70,11 @@ Expr *processExpr(Expr *p)
 		strcpy(prev_p, p->name);
 		p = evalExpr(p);
 		p = altExpr(p);
+		p = evalExpr(p);
 		p = distExpr(p);
+		p = evalExpr(p);
 		p = expExpr(p);
+		p = evalExpr(p);
 		p = commExpr(p);
 		p = evalExpr(p);
 	} while (strcmp(prev_p, p->name) != 0);

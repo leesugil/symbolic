@@ -630,55 +630,30 @@ Expr *refreshExprNode(Expr *p)
 	if (strcmp(p->op, "") == 0)
 		return p;
 
-	Op *op = getOp(op_tree, p->op);
-	Op *op2 = NULL;
-	Expr *q = NULL;
-
 	char line[MAXCHAR] = "";
 	strcpy(line, p->left->name);
-	for (int i = 0; op->right_dist_over[i] != NULL; i++)
-		if (strcmp(op->right_dist_over[i], p->left->op) == 0)
-			parenthstr(line);
-	if (strcmp(p->op, p->left->op) == 0)
-		if (op->right_assoc != NULL && op->left_assoc == NULL)
-			parenthstr(line);			/* because otherwise
-										   x^y^z == z^(y^z)
-										      ^             */
-	q = addExpr(q, line);
-	op2 = getOp(op_tree, q->op);
-	removeExpr(&q);
-	if (op2 != NULL && op2->order < op->order)
+	if (strlen(p->left->op) > 0)
 		parenthstr(line);
 	strcpy(p->name, line);
 	strcat(p->name, p->op);
 	strcpy(line, p->right->name);
-	for (int i = 0; op->left_dist_over[i] != NULL; i++)
-		if (strcmp(op->left_dist_over[i], p->right->op) == 0)
-			parenthstr(line);
-	if (strcmp(p->op, p->right->op) == 0)
-		if (op->left_assoc != NULL && op->right_assoc == NULL)
-			parenthstr(line);			/* because otherwise
-										   x/y/z == (x/y)/z
-										    ^               */
-	q = addExpr(q, line);
-	op2 = getOp(op_tree, q->op);
-	removeExpr(&q);
-	if (op2 != NULL && op2->order < op->order)
+	if (strlen(p->right->op) > 0)
 		parenthstr(line);
 	strcat(p->name, line);
 
-	/* issues:
-	 * x^a * (x^b)
-	 * */
+	strcpy(line, p->name);
+	removeExpr(&p);
+	p = addExpr(p, line);
 
 	return p;
 }
 
-/* altExpr: x - y ==> x + -1 * y, etc. */
+/* altExpr: replaces the "inverse" operations of field by commutable form */
+//x - y ==> x + -1 * y*/
 // x / y ==> x * y^-1
-Expr *_altExpr(Expr *p)
+Expr *altExprNode(Expr *p)
 {
-	char *prog = "_altExpr";
+	char *prog = "altExprNode";
 
 	if (p->left == NULL || p-> right == NULL)
 		return p;
@@ -703,15 +678,34 @@ Expr *_altExpr(Expr *p)
 		p = addExpr(p, line);
 	}
 
+	return p;
+}
+Expr *_altExpr(Expr *p)
+{
+	char *prog = "altExpr";
+
+	if (p == NULL)
+		return NULL;
+	
 	p->left = _altExpr(p->left);
 	p->right = _altExpr(p->right);
+
+	p = refreshExprNode(p);	// update p->name and re-branch
+	p = altExprNode(p);
 
 	return p;
 }
 Expr *altExpr(Expr *p)
 {
-	p = _altExpr(p);
-	p = refreshExpr(p);
+	if (p == NULL)
+		return NULL;
+
+	char prev[MAXCHAR] = "";
+
+	do {
+		strcpy(prev, p->name);
+		p = _altExpr(p);
+	} while (strcmp(prev, p->name) != 0);
 
 	return p;
 }
@@ -736,9 +730,9 @@ void testaltExpr(void)
 }
 
 /* expExpr: exponent laws */
-Expr *_expExpr(Expr *p)
+Expr *expExprNode(Expr *p)
 {
-	char *prog = "_expExpr";
+	char *prog = "expExprNode";
 
 	if (p->left == NULL || p-> right == NULL)
 		return p;
@@ -775,24 +769,23 @@ Expr *_expExpr(Expr *p)
 				break;
 			}
 		if (j != -1) {
+			/* (x^a)^b ==> x^(a * b)
+			 *                  ^   */
 			char *op2 = op->left2right_assoc_by[j][1];
-			strcpy(right, p->right->name);
-			if (strlen(p->right->op) > 0)
+			strcpy(right, p->right->name);				// b
+			if (strlen(p->right->op) > 0)				// (b)
 				parenthstr(right);
-			parseExprLeft(left_left, p->left->name, getOp(op_tree, p->left->op), block_start, block_end);
-			parenthExprLeft(left_left, p->left);
-			if (p->left->left != NULL)
-				if (strlen(p->left->left->op) > 0)
-					parenthstr(left_left);
-			parseExprRight(left_right, p->left->name, getOp(op_tree, p->left->op), block_start, block_end);
-			parenthExprRight(left_right, p->left);
-			if (p->left->right != NULL)
-				if (strlen(p->left->right->op) > 0)
-					parenthstr(left_right);
+			strcpy(left_left, p->left->left->name);		// x
+			if (strlen(p->left->left->op) > 0)			// (x)
+				parenthstr(left_left);
+			strcpy(left_right, p->left->right->name);	//	a
+			if (strlen(p->left->right->op) > 0)			// (a)
+				parenthstr(left_right);
 			op->right_assoc_by(line, left_left, left_right, right, op2);
 		}
 	}
 	if (op->right2left_assoc_by[0][0] != NULL && strlen(line) == 0) {
+		/* hypothetically a^(b^x) ==> (a * b)^x */
 		for (i=0; op->right2left_assoc_by[i][0] != NULL; i++)
 			if (strcmp(p->right->op, op->right2left_assoc_by[i][0]) == 0) {
 				j = i;
@@ -800,19 +793,15 @@ Expr *_expExpr(Expr *p)
 			}
 		if (j != -1) {
 			char *op2 = op->right2left_assoc_by[j][1];
-			strcpy(left, p->left->name);
-			if (strlen(p->left->op) > 0)
+			strcpy(left, p->left->name);				// a
+			if (strlen(p->left->op) > 0)				// (a)
 				parenthstr(left);
-			parseExprLeft(right_left, p->right->name, getOp(op_tree, p->right->op), block_start, block_end);
-			parenthExprLeft(right_left, p->right);
-			if (p->right->left != NULL)
-				if (strlen(p->right->left->op) > 0)
-					parenthstr(right_left);
-			parseExprRight(right_right, p->right->name, getOp(op_tree, p->right->op), block_start, block_end);
-			parenthExprRight(right_right, p->right);
-			if (p->right->right != NULL)
-				if (strlen(p->right->right->op) > 0)
-					parenthstr(right_right);
+			strcpy(right_left, p->right->left->name);	// b
+			if (strlen(p->right->left->op) > 0)			// (b)
+				parenthstr(right_left);
+			strcpy(right_right, p->right->right->name);	// x
+			if (strlen(p->right->right->name) > 0)		// (x)
+				parenthstr(right_right);
 			op->left_assoc_by(line, left, right_left, right_right, op2);
 		}
 	}
@@ -825,23 +814,20 @@ Expr *_expExpr(Expr *p)
 			}
 		if (j != -1) {
 			char *op2 = op->left_dist_over_by[j][1];
-			strcpy(left, p->left->name);
-			if (strlen(p->left->op) > 0)
+			strcpy(left, p->left->name);				// x
+			if (strlen(p->left->op) > 0)				// (x)
 				parenthstr(left);
-			parseExprLeft(right_left, p->right->name, getOp(op_tree, p->right->op), block_start, block_end);
-			parenthExprLeft(right_left, p->right);
-			if (p->right->left != NULL)
-				if (strlen(p->right->left->op) > 0)
-					parenthstr(right_left);
-			parseExprRight(right_right, p->right->name, getOp(op_tree, p->right->op), block_start, block_end);
-			parenthExprRight(right_right, p->right);
-			if (p->right->right != NULL)
-				if (strlen(p->right->right->op) > 0)
-					parenthstr(right_right);
+			strcpy(right_left, p->right->left->name);	// a
+			if (strlen(p->right->left->op) > 0)			// (a)
+				parenthstr(right_left);
+			strcpy(right_right, p->right->right->name);	// b
+			if (strlen(p->right->right->op) > 0)		// (b)
+				parenthstr(right_right);
 			op->left_dist_over_char_f(line, left, right_left, right_right, op2);
 		}
 	}
 	if (op->right_dist_over_by[0][0] != NULL && strlen(line) == 0) {
+		/* hypothetically (a + b)^x ==> a^x * b^x */
 		for (i=0; op->right_dist_over_by[i][0] != NULL; i++)
 			if (strcmp(p->left->op, op->right_dist_over_by[i][0]) == 0) {
 				j = i;
@@ -849,19 +835,15 @@ Expr *_expExpr(Expr *p)
 			}
 		if (j != -1) {
 			char *op2 = op->right_dist_over_by[j][1];
-			strcpy(right, p->right->name);
-			if (strlen(p->right->op) > 0)
+			strcpy(right, p->right->name);					// x
+			if (strlen(p->right->op) > 0)					// (x)
 				parenthstr(right);
-			parseExprLeft(left_left, p->left->name, getOp(op_tree, p->left->op), block_start, block_end);
-			parenthExprLeft(left_left, p->left);
-			if (p->left->left != NULL)
-				if (strlen(p->left->left->op) > 0)
-					parenthstr(left_left);
-			parseExprRight(left_right, p->left->name, getOp(op_tree, p->left->op), block_start, block_end);
-			parenthExprRight(left_right, p->left);
-			if (p->left->right != NULL)
-				if (strlen(p->left->right->op) > 0)
-					parenthstr(left_right);
+			strcpy(left_left, p->left->left->name);			// a
+			if (strlen(p->left->left->op) > 0)				// (a)
+				parenthstr(left_left);
+			strcpy(left_right, p->left->right->name);		// b
+			if (strlen(p->left->right->op) > 0)				// (b)
+				parenthstr(left_right);
 			op->right_dist_over_char_f(line, right, left_left, left_right, op2);
 		}
 	}
@@ -869,17 +851,34 @@ Expr *_expExpr(Expr *p)
 	if (strlen(line) > 0) {
 		removeExpr(&p);
 		p = addExpr(p, line);
+		strcpy(line, p->name);
 	}
+
+	return p;
+}
+Expr *_expExpr(Expr *p)
+{
+	if (p == NULL)
+		return NULL;
 
 	p->left = _expExpr(p->left);
 	p->right = _expExpr(p->right);
+
+	p = refreshExprNode(p);
+	p = expExprNode(p);
 
 	return p;
 }
 Expr *expExpr(Expr *p)
 {
-	p = _expExpr(p);
-	p = refreshExpr(p);
+	if (p == NULL)
+		return NULL;
+
+	char prev[MAXCHAR] = "";
+	do {
+		strcpy(prev, p->name);
+		p = _expExpr(p);
+	} while (strcmp(prev, p->name) != 0);
 
 	return p;
 }
@@ -887,7 +886,7 @@ void testexpExpr(void)
 {
 	char *line = "(x^a)^b";
 	//line = "x^(a - b)";
-	//line = "(x^(a + b))^(c + d)";
+	line = "(x^(a + b))^(c + d)";
 	Expr *p = NULL;
 	op_tree = loadOps(op_tree);
 
@@ -904,9 +903,9 @@ void testexpExpr(void)
 }
 
 /* distExpr: x * (a - b) ==> x * a - x * b */
-Expr *_distExpr(Expr *p)
+Expr *distExprNode(Expr *p)
 {
-	char *prog = "_distExpr";
+	char *prog = "distExprNode";
 
 	if (p->left == NULL || p-> right == NULL)
 		return p;
@@ -946,61 +945,45 @@ Expr *_distExpr(Expr *p)
 			}
 	}
 
+	char x[MAXCHAR] = "", y[MAXCHAR] = "";
+	char left[MAXCHAR] = "", right[MAXCHAR] = "";
+	char left_left[MAXCHAR] = "", left_right[MAXCHAR] = "", right_left[MAXCHAR] = "", right_right[MAXCHAR] = "";
+
 	char line[MAXCHAR] = "";
 	if (l != -1) {
-		// (a - b) * (x - y)
-		//         * (x - y)
-		// a
-		//  -
-		// b
-		// a * (x - y) - b * (x - y)
-		char x[MAXCHAR] = "";
-		char y[MAXCHAR] = "";
-		char right[MAXCHAR] = "";
-		strcpy(right, p->right->name);
-		if (strlen(p->right->op) > 0)
-			parenthstr(right);
+		/* (a - b) * x ==> a * x - b * x */
 		Op *op_left = getOp(op_tree, p->left->op);
-		char left_left[MAXCHAR] = "";
-		parseExprLeft(left_left, p->left->name, getOp(op_tree, p->left->op), block_start, block_end);
-		parenthExprLeft(left_left, p->left);
-		char left_right[MAXCHAR] = "";
-		parseExprRight(left_right, p->left->name, getOp(op_tree, p->left->op), block_start, block_end);
-		parenthExprRight(left_right, p->left);
-		if (strlen(p->left->op) > 0) {
+		strcpy(right, p->right->name);				// x
+		if (strlen(p->right->op) > 0)				// (x)
+			parenthstr(right);
+		strcpy(left_left, p->left->left->name);		// a
+		if (strlen(p->left->left->op) > 0)			// (a)
 			parenthstr(left_left);
+		strcpy(left_right, p->left->right->name);	// b
+		if (strlen(p->left->right->op) > 0)			// (b)
 			parenthstr(left_right);
-		}
-		op->char_f(x, left_left, right);
-		op->char_f(y, left_right, right);
-		op_left->char_f(line, x, y);
+		op->char_f(x, left_left, right);			// a * x
+		op->char_f(y, left_right, right);			// b * x
+		parenthstr(x);								// (a * x)
+		parenthstr(y);								// (b * x)
+		op_left->char_f(line, x, y);				// a * x - b * x
 	} else if (r != -1) {
-		// (a - b) * (x - y)
-		// (a - b) * 
-		// x
-		//  -
-		// y
-		// (a - b) * x - (a - b) * y
-		char x[MAXCHAR] = "";
-		char y[MAXCHAR] = "";
-		char left[MAXCHAR] = "";
-		strcpy(left, p->left->name);
-		if (strlen(p->left->op) > 0)
-			parenthstr(left);
+		/* a * (x - y) == > a * x - b * y */
 		Op *op_right = getOp(op_tree, p->right->op);
-		char right_left[MAXCHAR] = "";
-		parseExprLeft(right_left, p->right->name, getOp(op_tree, p->right->op), block_start, block_end);
-		parenthExprLeft(right_left, p->right);
-		char right_right[MAXCHAR] = "";
-		parseExprRight(right_right, p->right->name, getOp(op_tree, p->right->op), block_start, block_end);
-		parenthExprRight(right_right, p->right);
-		if (strlen(p->right->op) > 0) {
+		strcpy(left, p->left->name);					// a
+		if (strlen(p->left->op) > 0)					// (a)
+			parenthstr(left);
+		strcpy(right_left, p->right->left->name);		// x
+		if (strlen(p->right->left->op) > 0)				// (x)
 			parenthstr(right_left);
+		strcpy(right_right, p->right->right->name);		// y
+		if (strlen(p->right->right->op) > 0)			// (y)
 			parenthstr(right_right);
-		}
-		op->char_f(x, left, right_left);
-		op->char_f(y, left, right_right);
-		op_right->char_f(line, x, y);
+		op->char_f(x, left, right_left);				// a * x
+		op->char_f(y, left, right_right);				// a * y
+		parenthstr(x);									// (a * x)
+		parenthstr(y);									// (b * x)
+		op_right->char_f(line, x, y);					// a * x - a * y
 	}
 
 	if (strlen(line) > 0) {
@@ -1008,15 +991,32 @@ Expr *_distExpr(Expr *p)
 		p = addExpr(p, line);
 	}
 
+	return p;
+}
+Expr *_distExpr(Expr *p)
+{
+	if (p == NULL)
+		return NULL;
+
 	p->left = _distExpr(p->left);
 	p->right = _distExpr(p->right);
+
+	p = refreshExprNode(p);
+	p = distExprNode(p);
 
 	return p;
 }
 Expr *distExpr(Expr *p)
 {
-	p = _distExpr(p);
-	p = refreshExpr(p);
+	if (p == NULL)
+		return NULL;
+
+	char prev[MAXCHAR] = "";
+
+	do {
+		strcpy(prev, p->name);
+		p = _distExpr(p);
+	} while (strcmp(prev, p->name) != 0);
 
 	return p;
 }
@@ -1035,6 +1035,7 @@ void testdistExpr(void)
 	//char *line = "(1 + (-1 * 1)) * c";
 	char *line = "(x / y)^a";
 	line = "(x * (y^-1))^b";
+	line = "(a + b) * (c + d)";
 	Expr *p = NULL;
 	op_tree = loadOps(op_tree);
 
@@ -1046,6 +1047,144 @@ void testdistExpr(void)
 
 	printf("testdistExpr\n");
 	p = distExpr(p);
+	listExpr(p);
+	printf("---\n");
+}
+
+int treeLength(Expr *p);
+/* commutativity, associativity */
+/* commutativity
+ * (a * b) * (c * d)
+ * (a * b) * (d * c)
+ * (b * a) * (c * d)
+ * (b * a) * (d * c)
+ * (c * d) * (a * b)
+ * (c * d) * (b * a)
+ * (d * c) * (a * b)
+ * (d * c) * (b * a)
+ * */
+/* associativity
+ * (x * y) * (u * v)
+ * x * (y * (u * v))
+ * x * ((y * u) * v)
+ * ((x * y) * u) * v
+ * (x * (y * u)) * v
+ * */
+Expr *_commExpr(Expr *p)
+{
+	char *prog = "_commExpr";
+
+	if (p == NULL)
+		return NULL;
+
+	Op *op = getOp(op_tree, p->op);
+	if (op == NULL)
+		return p;
+	if (op->comm == NULL)
+		return p;
+
+	/* obtain variables */
+	/* commutativity
+	 * (a * b) * (c * d)
+	 * (a * b) * (d * c)
+	 * (b * a) * (c * d)
+	 * (b * a) * (d * c)
+	 * (c * d) * (a * b)
+	 * (c * d) * (b * a)
+	 * (d * c) * (a * b)
+	 * (d * c) * (b * a)
+	 * */
+	char a[MAXCHAR] = "", b[MAXCHAR] = "", c[MAXCHAR] = "", d[MAXCHAR] = "";
+	char line[MAXCHAR] = "";
+
+	if (strcmp(p->left->op, p->op) == 0) {
+		strcpy(a, p->left->left->name);
+		parenthstr(a);
+		strcpy(b, p->left->right->name);
+		parenthstr(b);
+	} else {
+		strcpy(a, p->left->name);
+		parenthstr(a);
+		strcpy(b, op->right_unit);
+	}
+	if (strcmp(p->right->op, p->op) == 0) {
+		strcpy(c, p->right->left->name);
+		parenthstr(c);
+		strcpy(d, p->right->right->name);
+		parenthstr(d);
+	} else {
+		strcpy(c, p->right->name);
+		parenthstr(c);
+		strcpy(d, op->right_unit);
+	}
+
+	char x[MAXCHAR] = "", y[MAXCHAR] = "", u[MAXCHAR] = "", v[MAXCHAR] = "";
+	/* check commutativity before having (b * a) */
+	char *var[] = { a, b, c, d, NULL };
+	char best_line[MAXCHAR] = "";
+	strcpy(best_line, p->name);
+	int best_length = treeLength(p);
+	int length = 0;
+	Expr *q = NULL;
+	for (int i = 0; var[i] != NULL; i++)
+		for (int j = 0; var[j] != NULL; j++)
+			if (i != j)
+				for (int k = 0; var[k] != NULL; k++)
+					for (int l = 0; var[l] != NULL; l++)
+						if (k != l && i != k && i != l && j != k && j != l) {
+							strcpy(x, var[i]); strcpy(y, var[j]);
+							strcpy(u, var[k]); strcpy(v, var[l]);
+							fprintf(stderr, "%s: %s%s%s%s%s%s%s\n", prog, x, p->op, y, p->op, u, p->op, v);
+							sprintf(line, "%s%s%s%s%s%s%s\n", x, p->op, y, p->op, u, p->op, v);
+							q = addExpr(q, line);
+							q = evalExpr(q);
+							length = treeLength(q);
+							if (length < best_length)
+								strcpy(best_line, q->name);
+							removeExpr(&q);
+						}
+	removeExpr(&p);
+	p = addExpr(p, best_line);
+
+	return p;
+}
+Expr *commExpr(Expr *p)
+{
+	if (p == NULL)
+		return NULL;
+
+	p->left = commExpr(p->left);
+	p->right = commExpr(p->right);
+
+	p = refreshExprNode(p);
+
+	char prev[MAXCHAR] = "";
+
+	do {
+		strcpy(prev, p->name);
+		p = _commExpr(p);
+	} while (strcmp(prev, p->name) != 0);
+
+	return p;
+}
+void testcommExpr(void)
+{
+	op_tree = loadOps(op_tree);
+	char *line = "1 + x - 1";
+	line = "(a - b) * (c * d)";
+	line = "(a + b) * (1 * d)";
+	line = "(1 * b) * (2 * d) * (5 * b)";
+	Expr *p = NULL;
+
+	p = addExpr(p, line);
+
+	printf("original\n");
+	listExpr(p);
+	printf("---\n");
+
+	p = commExpr(p);
+
+	printf("testcommExpr\n");
 	listExpr(p);
 	printf("---\n");
 }
@@ -1106,12 +1245,11 @@ void testdistExpr(void)
  * or simply calculating tree length will be better, tbh
  * 	*/
 Expr *sortExpr(Expr *p);
-int treeLength(Expr *p);
 Expr *_commExprReduce(Expr *p, char line[]);
 
 /* commExpr: */
 /* should run after altExpr */
-Expr *_commExpr(Expr *p)
+Expr *_commExpr2(Expr *p)
 {
 	char *prog = "_commExpr";
 	fprintf(stderr, "%s:\"%s\"(enter)\n", prog, p->name);
@@ -1226,7 +1364,7 @@ Expr *_commExpr(Expr *p)
 
 	return p;
 }
-Expr *commExpr(Expr *p)
+Expr *commExpr2(Expr *p)
 {
 	char *prog = "commExpr";
 
@@ -1244,7 +1382,7 @@ Expr *commExpr(Expr *p)
 	
 	return p;
 }
-void testcommExpr(void)
+void testcommExpr2(void)
 {
 	op_tree = loadOps(op_tree);
 	char *line = "1 + x - 1";
@@ -1490,7 +1628,10 @@ void testevalExpr(void)
 	//char *line = "-1 * 3 * a * 2^2 * 7 * -1";
 	//char *line = "-2 * (a + b) * -1";
 	char *line = "-1 * 2 * 3^2 * 4";
-	line = "4^-2";
+	line = "x^(y - y)";
+	line = "f = a * x^2 + b * x^1 + c * x^0, g = G * M * m / r^2";
+	line = "((G * (M * m)) * (r^-2))";
+	line = "((a * (x^2)) + ((b * x) + (c * 1)))";
 	Expr *p = NULL;
 	op_tree = loadOps(op_tree);
 
@@ -1500,10 +1641,10 @@ void testevalExpr(void)
 	listExpr(p);
 	printf("---\n");
 
-	printf("after distributing\n");
-	p = distExpr(p);
-	listExpr(p);
-	printf("---\n");
+	//printf("after distributing\n");
+	//p = distExpr(p);
+	//listExpr(p);
+	//printf("---\n");
 
 	printf("testevalExpr\n");
 	p = evalExpr(p);
