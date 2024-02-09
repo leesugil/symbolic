@@ -79,5 +79,7 @@ Expr *processExpr(Expr *p)
 		p = evalExpr(p);
 	} while (strcmp(prev_p, p->name) != 0);
 
+	p = displayExpr(p);
+
 	return p;
 }
