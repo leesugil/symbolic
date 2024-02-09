@@ -647,6 +647,28 @@ Expr *refreshExprNode(Expr *p)
 
 	return p;
 }
+/* refreshExprNodeName: refreshExprNode but only updates name, no re-branching */
+Expr *refreshExprNodeName(Expr *p)
+{
+	if (p->left == NULL || p-> right == NULL)
+		return p;
+
+	if (strcmp(p->op, "") == 0)
+		return p;
+
+	char line[MAXCHAR] = "";
+	strcpy(line, p->left->name);
+	if (strlen(p->left->op) > 0)
+		parenthstr(line);
+	strcpy(p->name, line);
+	strcat(p->name, p->op);
+	strcpy(line, p->right->name);
+	if (strlen(p->right->op) > 0)
+		parenthstr(line);
+	strcat(p->name, line);
+
+	return p;
+}
 
 /* altExpr: replaces the "inverse" operations of field by commutable form */
 //x - y ==> x + -1 * y*/
@@ -1189,260 +1211,6 @@ void testcommExpr(void)
 	printf("---\n");
 }
 
-/* commExpr
- * peudo code plan
- * objective: get the shortest length expression
- * for each manipulation on a given expr based on op, run evalExprNode
- * possible manipulations on given op, left_op, right_op:
- * 	this is too headachey, let's break down actions can be done on a single op first.
- * 	(1) this comparison should occur at each manipulation (comm, assoc, dist, exp, etc.)
- * 			eval
- * 			alt-expr and eval
- * 	so two cases for each manipulation
- * 	(2) commutativity: left has up to two versions with this
- * 			left
- * 			left-comm
- * 		right also has up to two versions with this
- * 			right
- * 			right-comm
- * 		with these up-to-two versions of left and right,
- * 		the main operation can consider up to eight cases:
- * 			left * right
- * 			left * right-comm
- * 			left-comm * right
- * 			left-comm * right-comm
- * 			right * left
- * 			right * left-comm
- * 			right-comm * left
- * 			right-comm * left-comm
- * 		(of course, at the end of each case, (1) runs)
- * 	...
- * this is going to be too wild (and hard-coding based) the program getting developed this way.
- * let's take a simpler approach:
- * in commExpr,
- * at each p,
- * run altExprNode,
- * only try commutating left-op and right-op
- * 		left * right
- * 		left * right-comm
- * 		left-comm * right
- * 		left-comm * right-comm
- * 		right * left
- * 		right * left-comm
- * 		right-comm * left
- * 		right-comm * left-comm
- * 	for all these cases,
- * 	removeExpr and addExpr again,
- * 	evalExpr,
- * 	pick the shortest length p->name.
- * 	run sortExpr on last time for the final outcome.
- * 	i haven't proved the convergence of this loop nor whether the minimum obtained this way will only a local minimum or not, but let's set is as the current direction to keep moving forward.
- *
- * this might not work as well because a double can have longer decimal digits then a product of characters
- * a cheap work-around is to measure the line-length without the number part.
- * countnonnum in _getword.h
- *
- * or simply calculating tree length will be better, tbh
- * 	*/
-Expr *sortExpr(Expr *p);
-Expr *_commExprReduce(Expr *p, char line[]);
-
-/* commExpr: */
-/* should run after altExpr */
-Expr *_commExpr2(Expr *p)
-{
-	char *prog = "_commExpr";
-	fprintf(stderr, "%s:\"%s\"(enter)\n", prog, p->name);
-
-	if (p == NULL)
-		return NULL;
-	if (p->left == NULL || p->right == NULL)
-		return p;
-
-	
-	p->left = _commExpr(p->left);
-	p->right = _commExpr(p->right);
-
-	p = refreshExpr(p); // refresh the whole left and right
-	
-	Op *op = getOp(op_tree, p->op);
-	char left[MAXCHAR] = "";
-	char left_comm[MAXCHAR] = "";
-	char right[MAXCHAR] = "";
-	char right_comm[MAXCHAR] = "";
-	char line[MAXCHAR] = "";
-	int length = 0;
-	char best_line[MAXCHAR] = "";
-	int best_length = treeLength(p);
-	//int best_length = countnonnum(p->name);
-	char x[MAXCHAR] = "";
-	char y[MAXCHAR] = "";
-	strcpy(left, p->left->name);
-	strcpy(right, p->right->name);
-	strcpy(best_line, p->name);
-	Op *op_left = getOp(op_tree, p->left->op);
-	Op *op_right = getOp(op_tree, p->right->op);
-
-	// prepare for variables
-	if (op_left != NULL) {
-		strcpy(x, p->left->left->name);
-		if (strlen(p->left->left->op) > 0)
-			parenthstr(x);
-		strcpy(y, p->left->right->name);
-		if (strlen(p->left->right->op) > 0)
-			parenthstr(y);
-		op_left->char_f(left, x, y);
-		if (op_left->comm != NULL)
-			op_left->comm(left_comm, x, y);
-	}
-	fprintf(stderr, "%s:(whole loop start)***%s***\n", prog, p->name);
-	if (op_right != NULL) {
-		strcpy(x, p->right->left->name);
-		if (strlen(p->right->left->op) > 0)
-			parenthstr(x);
-		strcpy(y, p->right->right->name);
-		if (strlen(p->right->right->op) > 0)
-			parenthstr(y);
-		op_right->char_f(right, x, y);
-		if (op_right->comm != NULL)
-			op_right->comm(right_comm, x, y);
-	}
-
-/*
- * 		left * right
- * 		left * right-comm
- * 		left-comm * right
- * 		left-comm * right-comm
- * 		right * left
- * 		right * left-comm
- * 		right-comm * left
- * 		right-comm * left-comm
- * 		*/
-	char *xs[] = { left, left_comm, NULL };
-	char *ys[] = { right, right_comm, NULL };
-
-	for (int i = 0; xs[i] != NULL; i++) {
-		if (strlen(xs[i]) == 0)
-			continue;
-		strcpy(x, xs[i]);
-		// parseExprLeft??
-		parenthExprLeft(x, p);
-		for (int j = 0; ys[j] != NULL; j++) {
-			if (strlen(ys[j]) == 0)
-				continue;
-			strcpy(y, ys[j]);
-			// parseExprRight??
-			parenthExprLeft(y, p);
-			op->char_f(line, x, y);
-			p = _commExprReduce(p, line);
-			length = treeLength(p);
-			if (length < best_length) {
-				best_length = length;
-				strcpy(best_line, p->name);
-				fprintf(stderr, "%s:new record:%d\n", prog, best_length);
-				fprintf(stderr, "%s:winner:\"%s\"\n", prog, best_line);
-				fprintf(stderr, "%s:case:x:%s:y:%s\n", prog, x, y);
-			}
-			if (op->comm != NULL) {
-				op->comm(line, x, y);
-				p = _commExprReduce(p, line);
-				length = treeLength(p);
-				if (length < best_length) {
-					best_length = length;
-					strcpy(best_line, p->name);
-					fprintf(stderr, "%s:new record:%d\n", prog, best_length);
-					fprintf(stderr, "%s:winner:\"%s\"\n", prog, best_line);
-					fprintf(stderr, "%s:case:y:%s:x:%s\n", prog, y, x);
-				}
-			}
-		}
-	}
-
-	removeExpr(&p);
-	p = addExpr(p, best_line);
-	fprintf(stderr, "%s: (exit) %s\n", prog, p->name);
-
-	return p;
-}
-Expr *commExpr2(Expr *p)
-{
-	char *prog = "commExpr";
-
-	int n = 0;
-
-	char prev_name[MAXCHAR];
-	do {
-		n++;
-		fprintf(stderr, "%s: Round (%d)\n", prog, n);
-		strcpy(prev_name, p->name);
-		p = _commExpr(p);
-		fprintf(stderr, "%s:(%d)prev_name:%s\n", prog, n, prev_name);
-		fprintf(stderr, "%s:(%d)p->name:%s\n", prog, n, p->name);
-	} while (strcmp(p->name, prev_name) != 0);
-	
-	return p;
-}
-void testcommExpr2(void)
-{
-	op_tree = loadOps(op_tree);
-	char *line = "1 + x - 1";
-	char *test_lines[] = {
-		"1 + x - 1",
-		"2 * x * 3 * y",
-		"2 + x + 3 + y",
-		"(2 * x * 3 * y)^a - (x / y)^b",
-		"x - x",
-		"-1 * x + x",
-		"x / x",
-		"x^-1 * x",
-		"(r^2)^-1",
-		NULL
-	};
-	Expr *p = NULL;
-	for (int i = 0; test_lines[i] != NULL; i++) {
-		removeExpr(&p);
-		p = addExpr(p, test_lines[i]);
-
-		printf("original\n");
-		listExpr(p);
-		printf("---\n");
-
-		p = altExpr(p);
-		p = commExpr(p);
-
-		printf("testcommExpr\n");
-		listExpr(p);
-		printf("---\n");
-	}
-}
-
-Expr *_commExprReduce(Expr *p, char line[])
-{
-	char *prog = "_commExprReduce";
-
-	fprintf(stderr, "%s:%s(start)\n", prog, line);
-	removeExpr(&p);
-	p = addExpr(p, line);
-
-	char prev_line[MAXCHAR] = "";
-	do {
-		fprintf(stderr, "%s:prev_line:%s\n", prog, prev_line);
-		fprintf(stderr, "%s:p->name  :%s\n", prog, p->name);
-		strcpy(prev_line, p->name);
-		removeExpr(&p);
-		p = addExpr(p, prev_line);
-		p = evalExpr(p);
-		strcpy(line, p->name);
-		removeExpr(&p);
-		p = addExpr(p, line);
-		p = sortExpr(p);
-		fprintf(stderr, "%s:p->name(2:%s\n", prog, p->name);
-	} while (strcmp(p->name, prev_line) != 0);
-
-	fprintf(stderr, "%s:%s(end)\n", prog, p->name);
-	return p;
-}
-
 int treeLength(Expr *p)
 {
 	char *prog = "treeLength";
@@ -1469,35 +1237,6 @@ int treeLength(Expr *p)
 	}
 
 	return length;
-}
-int treeLength2(Expr *p)
-{
-	char *prog = "treeLength";
-
-	static int n = 0;
-	static int best_n = 0;
-	if (n == 0)
-		best_n = 0;
-
-	if (p == NULL)
-		return n;
-	fprintf(stderr, "%s:%d@%s, best:%d\n", prog, n, p->name, best_n);
-
-	if (p->left != NULL && p->right != NULL) {
-		n++;
-		fprintf(stderr, "%s:%d->%d@%s\n", prog, n-1, n, p->name);
-	}
-	treeLength(p->left);
-	treeLength(p->right);
-	if (p->left != NULL && p->right != NULL) {
-		n--;
-		fprintf(stderr, "%s:%d->%d@%s\n", prog, n+1, n, p->name);
-	}
-
-	if (n > best_n)
-		best_n = n;
-
-	return best_n;
 }
 void testtreeLength(void)
 {
@@ -1578,7 +1317,7 @@ void testsortExpr(void)
 
 
 
-/* to be updated */
+/* to be updated, combined with Op later */
 Expr *_calcExprMult(Expr *p);
 Expr *_calcExprDiv(Expr *p);
 Expr *_calcExprAdd(Expr *p);
@@ -1899,13 +1638,205 @@ Expr *_calcExprMod(Expr *p)
 	return p;
 }
 
-void refreshExprTree(Expr **p)
+Expr *_displayExpr(Expr *p)
 {
-	char line[MAXCHAR] = "";
+	char *prog = "_displayExpr";
 
-	strcpy(line, (*p)->name);
-	removeExpr(p);
-	*p = addExpr(*p, line);
+	if (p == NULL)
+		return NULL;
+
+	Op *op = getOp(op_tree, p->op);
+	if (op == NULL)
+		return p;
+
+	/* a - (b + c) vs a - b + c		use rank diff. actually, this will be gone by altExpr
+	 * a - (b - c) vs a - b - c		use left-assoc and not right. actually, this will be gone by altExpr
+	 * x/(y/z) vs x/y/z				use left-assoc and not right. actually, this will be gone by altExpr
+	 * (x^y)^z vs x^y^z				use right-assoc and not left
+	 * x^-1 * b vs x^(-1 * b)		use rank diff
+	 * (a - b) * c vs a - b * c		use left_dist_over
+	 * */
+	Op *op_left = getOp(op_tree, p->left->op);
+	Op *op_right = getOp(op_tree, p->right->op);
+	char line[MAXCHAR] = "";
+	strcpy(line, p->left->name);
+	if (op_left != NULL) {
+		if (strcmp(p->op, p->left->op) == 0) {
+			if (op->right_assoc != NULL && op->left_assoc == NULL)
+				parenthstr(line);	// right-assoc but not left, so
+									// got to be empahsized
+		} else if (op_left->order < op->order) {	// rank diff
+			parenthstr(line);
+		} else {
+			for (int i = 0; op->left_dist_over[i] != NULL; i++)	// left_dist_over
+				if (strcmp(op->left_dist_over[i], op_left->name) == 0)
+					parenthstr(line);
+		}
+	}
+	strcpy(p->name, line);
+	strcat(p->name, p->op);
+	strcpy(line, p->right->name);
+	if (op_right != NULL) {
+		if (strcmp(p->op, p->right->op) == 0) {
+			if (op->left_assoc != NULL && op->right_assoc == NULL)
+				parenthstr(line);	// left-assoc but not right, so
+									// got to be empahsized
+		} else if (op_right->order < op->order) {	// rank diff
+			parenthstr(line);
+		} else {
+			for (int i = 0; op->right_dist_over[i] != NULL; i++)	// left_dist_over
+				if (strcmp(op->right_dist_over[i], op_right->name) == 0)
+					parenthstr(line);
+		}
+	}
+	strcat(p->name, line);
+	replacestr(p->name, " * ", " ");
+
+	return p;
+}
+Expr *displayExpr(Expr *p)
+{
+	if (p == NULL)
+		return NULL;
+
+	p->left = displayExpr(p->left);
+	p->right = displayExpr(p->right);
+
+	p = refreshExprNodeName(p);
+
+	char prev[MAXCHAR] = "";
+
+	do {
+		strcpy(prev, p->name);
+		p = _displayExpr(p);
+	} while (strcmp(prev, p->name) != 0);
+
+	return p;
+}
+void testdisplayExpr(void)
+{
+	op_tree = loadOps(op_tree);
+	Expr *p = NULL;
+
+	char *line = "1 + x - 1";
+	printf("original\n");
+	p = addExpr(p, line);
+	printf("%s\n", line);
+	printf("testdisplayExpr\n");
+	p = displayExpr(p);
+	printf("%s\n", p->name);
+	removeExpr(&p);
+	printf("---\n");
+
+	line = "(a - b) * (c * d)";
+	printf("original\n");
+	p = addExpr(p, line);
+	printf("%s\n", line);
+	printf("testdisplayExpr\n");
+	p = displayExpr(p);
+	printf("%s\n", p->name);
+	removeExpr(&p);
+	printf("---\n");
+
+	line = "x^y^z";
+	printf("original\n");
+	p = addExpr(p, line);
+	printf("%s\n", line);
+	printf("testdisplayExpr\n");
+	p = displayExpr(p);
+	printf("%s\n", p->name);
+	removeExpr(&p);
+	printf("---\n");
+
+	line = "(x^y)^z";
+	printf("original\n");
+	p = addExpr(p, line);
+	printf("%s\n", line);
+	printf("testdisplayExpr\n");
+	p = displayExpr(p);
+	printf("%s\n", p->name);
+	removeExpr(&p);
+	printf("---\n");
+
+	line = "x/y/z";
+	printf("original\n");
+	p = addExpr(p, line);
+	printf("%s\n", line);
+	printf("testdisplayExpr\n");
+	p = displayExpr(p);
+	printf("%s\n", p->name);
+	removeExpr(&p);
+	printf("---\n");
+
+	line = "x^(a * b)";
+	printf("original\n");
+	p = addExpr(p, line);
+	printf("%s\n", line);
+	printf("testdisplayExpr\n");
+	p = displayExpr(p);
+	printf("%s\n", p->name);
+	removeExpr(&p);
+	printf("---\n");
+
+	line = "x^a * b";
+	printf("original\n");
+	p = addExpr(p, line);
+	printf("%s\n", line);
+	printf("testdisplayExpr\n");
+	p = displayExpr(p);
+	printf("%s\n", p->name);
+	removeExpr(&p);
+	printf("---\n");
+
+	line = "x^a^b";
+	printf("original\n");
+	p = addExpr(p, line);
+	printf("%s\n", line);
+	printf("testdisplayExpr\n");
+	p = displayExpr(p);
+	printf("%s\n", p->name);
+	removeExpr(&p);
+	printf("---\n");
+	
+	line = "(x^a)^b";
+	printf("original\n");
+	p = addExpr(p, line);
+	printf("%s\n", line);
+	printf("testdisplayExpr\n");
+	p = displayExpr(p);
+	printf("%s\n", p->name);
+	removeExpr(&p);
+	printf("---\n");
+
+	line = "a - (b % c)";
+	printf("original\n");
+	p = addExpr(p, line);
+	printf("%s\n", line);
+	printf("testdisplayExpr\n");
+	p = displayExpr(p);
+	printf("%s\n", p->name);
+	removeExpr(&p);
+	printf("---\n");
+
+	line = "a - b % c";
+	printf("original\n");
+	p = addExpr(p, line);
+	printf("%s\n", line);
+	printf("testdisplayExpr\n");
+	p = displayExpr(p);
+	printf("%s\n", p->name);
+	removeExpr(&p);
+	printf("---\n");
+
+	line = "(a - b) % c";
+	printf("original\n");
+	p = addExpr(p, line);
+	printf("%s\n", line);
+	printf("testdisplayExpr\n");
+	p = displayExpr(p);
+	printf("%s\n", p->name);
+	removeExpr(&p);
+	printf("---\n");
 }
 
 
