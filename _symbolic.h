@@ -8,6 +8,7 @@
 
 #include "symbol.h"
 #include "expression.h"
+#include "function.h"
 
 /* updateSymb: a function to
  * read an Expr-tree,
@@ -25,6 +26,8 @@ Symb *updateSymb(Symb *p, Expr *q)
 	p = updateSymb(p, q->left);
 	p = updateSymb(p, q->right);
 
+	char line[MAXCHAR] = "";
+
 	if (strcmp(q->op, " = ") == 0) {
 		/* add/update symbol */
 		fprintf(stderr, "%s: add/update a symbol with \"%s\" = \"%s\"\n", prog, q->left->name, q->right->name);
@@ -33,9 +36,24 @@ Symb *updateSymb(Symb *p, Expr *q)
 			/* we send an empty string "" to addSymb */
 			/* need to track how is this going to affect sybstitution */
 			/* so far, p->formula == "" is not counted toward substitution in updateExpr */
-			p = addSymb(p, q->left->name, "");
-		} else
-			p = addSymb(p, q->left->name, q->right->name);
+			sprintf(line, "%s", q->left->name);
+			p = addSymb(p, line, "");
+			strcat(line, "(");
+			p = addSymb(p, line, "");
+		} else {
+			sprintf(line, "%s", q->left->name);
+			p = addSymb(p, line, q->right->name);
+			strcat(line, "(");
+			p = addSymb(p, line, q->right->name);
+		}
+	} else if (strcmp(q->op, " =") == 0) {
+		if (q->right == NULL) {
+			/* same as "x = " having a NULL q->right */
+			sprintf(line, "%s", q->left->name);
+			p = addSymb(p, line, "");
+			strcat(line, "(");
+			p = addSymb(p, line, "");
+		}
 	}
 
 	return p;

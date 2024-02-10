@@ -1839,5 +1839,18 @@ void testdisplayExpr(void)
 	printf("---\n");
 }
 
+Expr *refreshExprName(Expr *p)
+{
+	if (p == NULL)
+		return NULL;
+	
+	p->left = refreshExprName(p->left);
+	p->right = refreshExprName(p->right);
+
+	p = refreshExprNodeName(p);
+
+	return p;
+}
+
 
 #endif	/* _EXPRESSION_H */
