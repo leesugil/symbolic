@@ -30,6 +30,7 @@
 *.exe
 *.out
 *.app
+a.out*
 
 # Temporary files or folders
 tmp*
