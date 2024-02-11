@@ -139,19 +139,27 @@ Expr *_updateExpr(Expr *p, Symb *root)
 	 * if so, update the function, update f in Symb, and call f */
 	char func_name[MAXCHAR] = "", symb_name[MAXCHAR] = "";
 	parseFuncName(func_name, p->name);
-	fprintf(stdout, "func_name \"%s\" is parsed from p->name \"%s\"\n", func_name, p->name);
+	fprintf(stderr, "%s: func_name \"%s\" is parsed from p->name \"%s\"\n", prog, func_name, p->name);
 	strcpy(symb_name, func_name);
 	if (symb_name[strlen(symb_name) - 1] == '(')
 		bcutstr(symb_name);
-	printf("symb_name \"%s\"\n", symb_name);
+	fprintf(stderr, "%s: symb_name \"%s\"\n", prog, symb_name);
 	if ((q = getSymb(root, symb_name)) != NULL) {			/* f */
-		fprintf(stdout, "symb_name detected in the symbol tree\n");
-		/* update function */
-		fprintf(stderr, "%s: q->name:\"%s\"\n", prog, q->name);
-		/* update Func formula and Symb before calling it */
-		func_tree = updateFunc(func_tree, p->name);
-
+		fprintf(stderr, "%s: symb_name %s detected in the symbol tree\n", prog, symb_name);
+		/* case 1) f( */
+		/* case 2) f */
+		if (strcmp(func_name, symb_name) != 0) {
+			/* f( */
+			/* check if f( is registered in func_tree.
+			 * if so, update func_tree using p->name because it could've been f(x + dx, y). then update symb_tree to update the formula for the symbol f.
+			 * if not, pass. it should've been added with updateSymb. */
+			fprintf(stderr, "%s: %s requires updating %s, calling updateFunc...\n", prog, func_name, symb_name);
+			func_tree = updateFunc(func_tree, p->name);
+			fprintf(stderr, "%s: func_tree updated\n", prog);
+		}
+		/* update p->name by the formula of f found in symb_tree */
 		if (strcmp(q->formula, "") != 0) {
+			fprintf(stderr, "%s: \"%s\" will be replaced by \"%s\"\n", prog, p->name, q->formula);
 			strcpy(p->name, q->formula);
 			p = parseExpr(p);
 		}
@@ -178,7 +186,7 @@ void testupdateExpr(void)
 	op_tree = loadOps(op_tree);
 
 	char *line = NULL;
-	line = "x = 5, y = 6, f = (x + y)";
+	line = "x = 5, y = 6, f(x, y) = a * x^2 + b * x^1 + y";
 	p = addExpr(p, line);
 	printf("symbol registration\n");
 	listExpr(p);
@@ -188,6 +196,15 @@ void testupdateExpr(void)
 	
 	removeExpr(&p);
 	line = "x * f * z";
+	p = addExpr(p, line);
+	printf("\nmath expression (before)\n");
+	listExpr(p);
+	p = updateExpr(p, symb_tree);
+	printf("\nmath expression (after)\n");
+	listExpr(p);
+
+	removeExpr(&p);
+	line = "x * f(x + 1, y) * z";
 	p = addExpr(p, line);
 	printf("\nmath expression (before)\n");
 	listExpr(p);
