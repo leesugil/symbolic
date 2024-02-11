@@ -180,7 +180,7 @@ static Expr *exprAlloc(void)
 	return (Expr *) malloc(sizeof(Expr));
 }
 
-Expr *parseExpr(Expr *p);
+extern Expr *parseExpr(Expr *p);
 
 Expr *addExpr(Expr *p, char *name)
 {
@@ -205,7 +205,6 @@ Expr *addExpr(Expr *p, char *name)
 
 /* parseExpr: capsulates remove_outer_block, parseExprOp, parseExprLeft, parseExprRight */
 Expr *parseExprBinOp(Expr *p, char *op);
-void refreshExprTree(Expr **p);
 
 Expr *parseExpr(Expr *p)
 {

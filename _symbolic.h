@@ -10,6 +10,15 @@
 #include "expression.h"
 #include "function.h"
 
+
+
+
+
+
+
+
+
+
 /* updateSymb: a function to
  * read an Expr-tree,
  * recognize p->op == " = ",
@@ -27,32 +36,29 @@ Symb *updateSymb(Symb *p, Expr *q)
 	p = updateSymb(p, q->right);
 
 	char line[MAXCHAR] = "";
+	char func_name[MAXCHAR] = "", symb_name[MAXCHAR] = "";
+	Func *r;
 
-	if (strcmp(q->op, " = ") == 0) {
-		/* add/update symbol */
+	if (strcmp(q->op, " = ") == 0 || strcmp(q->op, " =") == 0) {
+		/* add/update symbol and function */
 		fprintf(stderr, "%s: add/update a symbol with \"%s\" = \"%s\"\n", prog, q->left->name, q->right->name);
+		sprintf(line, "%s", q->left->name);
+		parseFuncName(func_name, line);		// f or f(
+		strcpy(symb_name, func_name);
+		if (symb_name[strlen(symb_name) - 1] == '(')	// f(
+			bcutstr(symb_name);							// f
 		if (q->right == NULL) {
-			/* this is a special case like expr "x = " having a NULL q->right */
-			/* we send an empty string "" to addSymb */
-			/* need to track how is this going to affect sybstitution */
-			/* so far, p->formula == "" is not counted toward substitution in updateExpr */
-			sprintf(line, "%s", q->left->name);
-			p = addSymb(p, line, "");
-			strcat(line, "(");
-			p = addSymb(p, line, "");
+			/* f or f(x, y) = */
+			p = addSymb(p, symb_name, "");
+			r = getFunc(func_tree, func_name);
+			removeFunc(&r);
 		} else {
-			sprintf(line, "%s", q->left->name);
-			p = addSymb(p, line, q->right->name);
-			strcat(line, "(");
-			p = addSymb(p, line, q->right->name);
-		}
-	} else if (strcmp(q->op, " =") == 0) {
-		if (q->right == NULL) {
-			/* same as "x = " having a NULL q->right */
-			sprintf(line, "%s", q->left->name);
-			p = addSymb(p, line, "");
-			strcat(line, "(");
-			p = addSymb(p, line, "");
+			/* f = or f(x, y) = x^2 + x * y + y^2 */
+			p = addSymb(p, symb_name, q->right->name);
+			r = getFunc(func_tree, func_name);
+			removeFunc(&r);
+			if (strcmp(symb_name, func_name) != 0)
+				func_tree = addFunc(func_tree, q->left->name, q->right->name);
 		}
 	}
 
@@ -60,16 +66,38 @@ Symb *updateSymb(Symb *p, Expr *q)
 }
 void testupdateSymb(void)
 {
-	Symb *p = NULL;
-	Expr *q = NULL;
+	Expr *p = NULL;
+	op_tree = loadOps(op_tree);
+	symb_tree = loadSymb(symb_tree);
 
 	char *line = NULL;
 	line = "x = 5, y = 6, f = (x + y)";
-	q = addExpr(q, line);
-	listExpr(q);
-	listSymb(p);
-	p = updateSymb(p, q);
-	listSymb(p);
+	p = addExpr(p, line);
+	printf("--listExpr\n");
+	listExpr(p);
+	printf("--before updating symb\n");
+	printf("-- listSymb\n");
+	listSymb(symb_tree);
+	printf("-- listFunc\n");
+	listFunc(func_tree);
+	printf("--testupdateSymb\n");
+	symb_tree = updateSymb(symb_tree, p);
+	printf("-- listSymb\n");
+	listSymb(symb_tree);
+	printf("-- listFunc\n");
+	listFunc(func_tree);
+
+	line = "f(x, y) = x^2 + x * y + y^2";
+	printf("-- the case %s\n", line);
+	removeExpr(&p);
+	p = addExpr(p, line);
+	symb_tree = updateSymb(symb_tree, p);
+	printf("-- listExpr\n");
+	listExpr(p);
+	printf("-- listSymb\n");
+	listSymb(symb_tree);
+	printf("-- listFunc\n");
+	listFunc(func_tree);
 }
 
 /* now, updating linked symbols could be tricky.
@@ -99,7 +127,7 @@ void testupdateSymb(void)
 
 Expr *_updateExpr(Expr *p, Symb *root)
 {
-	char *prog = "updateExpr";
+	char *prog = "_updateExpr";
 
 	if (p == NULL)
 		return NULL;
@@ -107,46 +135,63 @@ Expr *_updateExpr(Expr *p, Symb *root)
 	fprintf(stderr, "%s:\n", prog);
 
 	Symb *q = NULL;
-	if ((q = getSymb(root, p->name)) != NULL) {
+	/* check if of the form f(x + dx, y)
+	 * if so, update the function, update f in Symb, and call f */
+	char func_name[MAXCHAR] = "", symb_name[MAXCHAR] = "";
+	parseFuncName(func_name, p->name);
+	fprintf(stdout, "func_name \"%s\" is parsed from p->name \"%s\"\n", func_name, p->name);
+	strcpy(symb_name, func_name);
+	if (symb_name[strlen(symb_name) - 1] == '(')
+		bcutstr(symb_name);
+	printf("symb_name \"%s\"\n", symb_name);
+	if ((q = getSymb(root, symb_name)) != NULL) {			/* f */
+		fprintf(stdout, "symb_name detected in the symbol tree\n");
+		/* update function */
 		fprintf(stderr, "%s: q->name:\"%s\"\n", prog, q->name);
+		/* update Func formula and Symb before calling it */
+		func_tree = updateFunc(func_tree, p->name);
+
 		if (strcmp(q->formula, "") != 0) {
-		//if (strlen(q->formula) > 0) {
 			strcpy(p->name, q->formula);
 			p = parseExpr(p);
 		}
 	}
 
-	p->left = _updateExpr(p->left, root);
-	p->right = _updateExpr(p->right, root);
 
 	return p;
 }
 Expr *updateExpr(Expr *p, Symb *root) {
+	if (p == NULL)
+		return NULL;
+
+	p->left = updateExpr(p->left, root);
+	p->right = updateExpr(p->right, root);
+
+	p = refreshExprNode(p);
 	p = _updateExpr(p, root);
-	p = refreshExpr(p);
 
 	return p;
 }
 void testupdateExpr(void)
 {
-	Symb *root = NULL;
 	Expr *p = NULL;
+	op_tree = loadOps(op_tree);
 
 	char *line = NULL;
 	line = "x = 5, y = 6, f = (x + y)";
 	p = addExpr(p, line);
 	printf("symbol registration\n");
 	listExpr(p);
-	root = updateSymb(root, p);
+	symb_tree = updateSymb(symb_tree, p);
 	printf("\nsymbol tree\n");
-	listSymb(root);
+	listSymb(symb_tree);
 	
 	removeExpr(&p);
 	line = "x * f * z";
 	p = addExpr(p, line);
 	printf("\nmath expression (before)\n");
 	listExpr(p);
-	p = updateExpr(p, root);
+	p = updateExpr(p, symb_tree);
 	printf("\nmath expression (after)\n");
 	listExpr(p);
 }

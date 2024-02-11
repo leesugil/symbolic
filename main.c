@@ -11,6 +11,7 @@ int main()
 {
 	op_tree = loadOps(op_tree);
 	symb_tree = loadSymb(symb_tree);
+	func_tree = loadFunc(func_tree);
 	Expr *p = NULL;
 	char line[MAXCHAR] = "";
 

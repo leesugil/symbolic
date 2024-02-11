@@ -89,6 +89,11 @@ typedef struct Func Func;
 
 Func *func_tree = NULL;			// root functoin tree
 
+Func *loadFunc(Func *p)
+{
+	return p;
+}
+
 void removeFunc(Func **p);
 
 struct Func {
@@ -116,11 +121,12 @@ Func *addFunc(Func *p, char *name, char *formula)
 	int cond;
 
 	char func_name[MAXCHAR] = "";
-	parseFuncName(func_name, name);		// with '('
+	parseFuncName(func_name, name);		// with '(' if f(x, y)
 	
 	char symb_name[MAXCHAR] = "";
 	strcpy(symb_name, func_name);
-	bcutstr(symb_name);					// without '('
+	if (symb_name[strlen(symb_name) - 1] == '(')
+		bcutstr(symb_name);					// without '('
 
 	if (p == NULL) {
 		p = funcAlloc();
@@ -298,7 +304,16 @@ void parseFuncName(char w[], char *name)
 {
 	char *p = strstr(name, "(");
 	strcpy(w, name);
-	bcutnstr(w, strlen(p) - 1);
+	if (p != NULL)
+		bcutnstr(w, strlen(p) - 1);
+	for (int i = 0; i < strlen(w); i++) {
+		if (isalnum(w[i]) || (i == strlen(w)-1 && (isalnum(w[i]) || w[i] == '(')))
+			;
+		else {
+			w[0] = '\0';
+			return;
+		}
+	}
 }
 /* parseVarName: writes current variable name, returns pointer before the variable name */
 /* f(x, y) ==> x, y)
@@ -372,11 +387,12 @@ Func *updateFunc(Func *root, char *name)
 	char *prog = "updateFunc";
 
 	char func_name[MAXCHAR] = "";
-	parseFuncName(func_name, name);		// with '('
+	parseFuncName(func_name, name);		// with '(' if f(x, y)
 	
 	char symb_name[MAXCHAR] = "";
 	strcpy(symb_name, func_name);
-	bcutstr(symb_name);					// without '('
+	if (symb_name[strlen(symb_name) - 1] == '(')
+		bcutstr(symb_name);				// without '('
 	
 	Func *p = getFunc(root, func_name);
 

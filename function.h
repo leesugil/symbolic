@@ -3,5 +3,6 @@
 
 #include "_function.h"
 
+Func *loadFunc(Func *);
 
 #endif	// FUNCTION_H
