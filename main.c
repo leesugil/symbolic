@@ -24,10 +24,10 @@ int main()
 	symb_tree = updateSymb(symb_tree, p);
 	removeExpr(&p);
 
-	clear();
-	print_at(3, 3, "intput:");
-	draw_rect(1, 1, 70, 5, '*');
-	move_to(11, 3);
+	//clear();
+	//print_at(3, 3, "intput:");
+	//draw_rect(1, 1, 70, 5, '*');
+	//move_to(11, 3);
 
 	char *s = NULL;
 	size_t maxline = 0;
@@ -37,11 +37,11 @@ int main()
 		p = processExpr(p);
 		if (strcmp(p->op, ", ") != 0 &&
 				strcmp(p->op, " = ") != 0) {
-			clear();
-			move_to(3, 11);
+			//clear();
+			//move_to(3, 11);
 			listExpr(p);
 		}
-		/* render */
+		/* render
 		fill_rect(1, 1, 70, 9, ' ');
 		draw_rect(1, 1, 70, 5, '*');
 		draw_rect(1, 5, 70, 9, '*');
@@ -52,10 +52,11 @@ int main()
 		print_at(3, 3, "intput:");
 
 		move_to(11, 3);
+		*/
 	}
 
 	/* render */
-	clear();
+	//clear();
 }
 
 Expr *processExpr(Expr *p)
@@ -64,10 +65,11 @@ Expr *processExpr(Expr *p)
 		return NULL;
 
 	symb_tree = updateSymb(symb_tree, p);
-	p = updateExpr(p, symb_tree);
 
 	char prev_p[MAXCHAR] = "";
 	do {
+		p = updateExpr(p, symb_tree);	// for g(x) = f(x) case. working?
+										// also should this be a separate loop for performance?
 		strcpy(prev_p, p->name);
 		p = evalExpr(p);
 		p = altExpr(p);

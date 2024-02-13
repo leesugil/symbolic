@@ -48,12 +48,13 @@ Symb *updateSymb(Symb *p, Expr *q)
 		if (symb_name[strlen(symb_name) - 1] == '(')	// f(
 			bcutstr(symb_name);							// f
 		if (q->right == NULL) {
-			/* f or f(x, y) = */
+			/* f = or f(x, y) = */
 			p = addSymb(p, symb_name, "");
 			r = getFunc(func_tree, func_name);
 			removeFunc(&r);
 		} else {
-			/* f = or f(x, y) = x^2 + x * y + y^2 */
+			/* g = f or g(x) = f(x) */
+			/* f = x^2 or f(x, y) = x^2 + x * y + y^2 */
 			p = addSymb(p, symb_name, q->right->name);
 			r = getFunc(func_tree, func_name);
 			removeFunc(&r);
