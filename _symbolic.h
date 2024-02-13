@@ -145,6 +145,8 @@ Expr *_updateExpr(Expr *p, Symb *root)
 	if (symb_name[strlen(symb_name) - 1] == '(')
 		bcutstr(symb_name);
 	fprintf(stderr, "%s: symb_name \"%s\"\n", prog, symb_name);
+	if (strlen(symb_name) == 0)
+		return p;
 	if ((q = getSymb(root, symb_name)) != NULL) {			/* f */
 		fprintf(stderr, "%s: symb_name %s detected in the symbol tree\n", prog, symb_name);
 		/* case 1) f( */

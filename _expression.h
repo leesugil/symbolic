@@ -205,6 +205,7 @@ Expr *addExpr(Expr *p, char *name)
 
 /* parseExpr: capsulates remove_outer_block, parseExprOp, parseExprLeft, parseExprRight */
 Expr *parseExprBinOp(Expr *p, char *op);
+Expr *parseExprUnaOp(Expr *p);		// to be updated with more arguments on need
 
 Expr *parseExpr(Expr *p)
 {
@@ -246,6 +247,10 @@ Expr *parseExpr(Expr *p)
 			p = parseExprBinOp(p, "^");
 			p = parseExprBinOp(p, " % ");
 		}
+		if (strcmp(p->op, "") == 0) {
+			/* unary operations like functions */
+			p = parseExprUnaOp(p);
+		}
 	} else {
 		/* p->name == "" */
 		fprintf(stderr, "%s: example) F = G * m * M / r^2\n", prog);
@@ -286,6 +291,12 @@ Expr *parseExprBinOp(Expr *p, char *op)
 		}
 	}
 
+	return p;
+}
+/* parseExprUnaOp: parses unary operations. the current version only parses functions like f(x, y) */
+/* design choice: save the operator p->op as " () " with the symb_name "f" on LHS (p->left) and argument list "x, y" on RHS (p->right). when calling refreshExprNode or refreshExprNodeName, when " () " is detected, implement a separate code reconstruct the name back to f(x ,y). make " () " immune to dist, comm, etc. */
+Expr *parseExprUnaOp(Expr *p)
+{
 	return p;
 }
 
@@ -604,6 +615,7 @@ void testrefreshExpr(void)
 		"a / (b / c)",
 		"a - (b - c)",
 		"(a - b) - c",
+		"f(x) = x + 5, x = 2, y = 3",
 		NULL
 	};
 	Expr *p = NULL;
@@ -621,6 +633,7 @@ void testrefreshExpr(void)
 }
 
 /* refreshExprNode: used to update p->name when changes are made postorder traversal */
+Expr *refreshExprNodeName(Expr *p);
 Expr *refreshExprNode(Expr *p)
 {
 	if (p->left == NULL || p-> right == NULL)
@@ -629,17 +642,9 @@ Expr *refreshExprNode(Expr *p)
 	if (strcmp(p->op, "") == 0)
 		return p;
 
-	char line[MAXCHAR] = "";
-	strcpy(line, p->left->name);
-	if (strlen(p->left->op) > 0)
-		parenthstr(line);
-	strcpy(p->name, line);
-	strcat(p->name, p->op);
-	strcpy(line, p->right->name);
-	if (strlen(p->right->op) > 0)
-		parenthstr(line);
-	strcat(p->name, line);
+	p = refreshExprNodeName(p);
 
+	char line[MAXCHAR] = "";
 	strcpy(line, p->name);
 	removeExpr(&p);
 	p = addExpr(p, line);
@@ -655,16 +660,27 @@ Expr *refreshExprNodeName(Expr *p)
 	if (strcmp(p->op, "") == 0)
 		return p;
 
-	char line[MAXCHAR] = "";
-	strcpy(line, p->left->name);
-	if (strlen(p->left->op) > 0)
-		parenthstr(line);
-	strcpy(p->name, line);
-	strcat(p->name, p->op);
-	strcpy(line, p->right->name);
-	if (strlen(p->right->op) > 0)
-		parenthstr(line);
-	strcat(p->name, line);
+	char left[MAXCHAR] = "", right[MAXCHAR] = "", line[MAXCHAR] = "";
+	strcpy(left, p->left->name);
+	if (strlen(p->left->op) > 0 &&
+			strcmp(p->left->op, ", ") != 0 &&
+			strcmp(p->left->op, " () ") != 0 &&
+			strcmp(p->left->op, " = ") != 0)
+		parenthstr(left);
+	strcpy(right, p->right->name);
+	if (strlen(p->right->op) > 0 &&
+			strcmp(p->right->op, ", ") != 0 &&
+			strcmp(p->right->op, " () ") != 0 &&
+			strcmp(p->right->op, " = ") != 0)
+		parenthstr(right);
+	Op *op = getOp(op_tree, p->op);
+	if (op != NULL)
+		op->char_f(p->name, left, right);
+	else {
+		strcpy(p->name, left);
+		strcat(p->name, p->op);
+		strcat(p->name, right);
+	}
 
 	return p;
 }

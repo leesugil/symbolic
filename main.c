@@ -68,8 +68,11 @@ Expr *processExpr(Expr *p)
 
 	char prev_p[MAXCHAR] = "";
 	do {
+		strcpy(prev_p, p->name);
 		p = updateExpr(p, symb_tree);	// for g(x) = f(x) case. working?
-										// also should this be a separate loop for performance?
+	} while (strcmp(prev_p, p->name) != 0)
+
+	do {
 		strcpy(prev_p, p->name);
 		p = evalExpr(p);
 		p = altExpr(p);
