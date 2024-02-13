@@ -205,7 +205,7 @@ Expr *addExpr(Expr *p, char *name)
 
 /* parseExpr: capsulates remove_outer_block, parseExprOp, parseExprLeft, parseExprRight */
 Expr *parseExprBinOp(Expr *p, char *op);
-Expr *parseExprUnaOp(Expr *p);		// to be updated with more arguments on need
+Expr *parseExprFunc(Expr *p);		// to be updated with more arguments on need
 
 Expr *parseExpr(Expr *p)
 {
@@ -249,7 +249,7 @@ Expr *parseExpr(Expr *p)
 		}
 		if (strcmp(p->op, "") == 0) {
 			/* unary operations like functions */
-			p = parseExprUnaOp(p);
+			p = parseExprFunc(p);
 		}
 	} else {
 		/* p->name == "" */
@@ -293,10 +293,48 @@ Expr *parseExprBinOp(Expr *p, char *op)
 
 	return p;
 }
-/* parseExprUnaOp: parses unary operations. the current version only parses functions like f(x, y) */
+/* parseExprFunc: parses functions like f(x, y) */
 /* design choice: save the operator p->op as " () " with the symb_name "f" on LHS (p->left) and argument list "x, y" on RHS (p->right). when calling refreshExprNode or refreshExprNodeName, when " () " is detected, implement a separate code reconstruct the name back to f(x ,y). make " () " immune to dist, comm, etc. */
-Expr *parseExprUnaOp(Expr *p)
+Expr *parseExprFunc(Expr *p)
 {
+	char *prog = "parseExprFunc";
+
+	if (p == NULL) {
+		fprintf(stderr, "%s: NULL input, returning NULL\n", prog);
+		return NULL;
+	}
+	if (strlen(p->name) == 0) {
+		fprintf(stderr, "%s: strlen(p->name) == 0, returning p\n", prog);
+		return p;
+	}
+	if (p->name[strlen(p->name) - 1] != ')') {
+		fprintf(stderr, "%s: p->name[last] != ')', not a proper format to parse function notation in it:%s\n", prog, p->name);
+		return p;
+	}
+
+	char *s = strstr(p->name, "(");
+
+	if (s == NULL) {
+		fprintf(stderr, "%s: no function detected, returning p\n", prog);
+		return p;
+	}
+
+	char func_name[MAXCHAR] = "", symb_name[MAXCHAR] = "";
+	/* f */
+	strcpy(func_name, p->name);
+	bcutnstr(func_name, strlen(s) - 1);
+	strcpy(symb_name, func_name);
+	if (func_name[strlen(func_name) - 1] == '(')
+		bcutstr(symb_name);
+	/* x */
+	char x[MAXCHAR] = "";
+	strcpy(x, s);
+	remove_outer_block_blk(x, block_start, block_end);
+
+	strcpy(p->op, " () ");
+	p->left = addExpr(p->left, symb_name);
+	p->right = addExpr(p->right, x);
+
 	return p;
 }
 
@@ -305,15 +343,17 @@ Expr *evalExpr(Expr *p);
 void testparseExpr(void)
 {
 	op_tree = loadOps(op_tree);
-	char *line1 = "a * x^2 + b * x^1 + c * x^0";
-	char *line2 = "x * (a * (b - c) / d / e) / y";
-	char *line3 = "(a - c) / (b - c) - c";
-	char *line4 = "a * ((b / d) - (c / d))";
-	char *line5 = "(b / d) - (c / d)";
-	char *line6 = "x * a * (b - c) / d / y * z + x";
+	char *line = "a * x^2 + b * x^1 + c * x^0";
+	line = "x * (a * (b - c) / d / e) / y";
+	line = "(a - c) / (b - c) - c";
+	line = "a * ((b / d) - (c / d))";
+	line = "(b / d) - (c / d)";
+	line = "x * a * (b - c) / d / y * z + x";
+	line = "f(x + dx, y + dy)";
+	line = "f(g(x + dx), y) + x + y";
 	Expr *expr = NULL;
 
-	expr = addExpr(expr, line6);
+	expr = addExpr(expr, line);
 	printf("original expr:\n");
 	listExpr(expr);
 	printf("---\n");
@@ -616,6 +656,8 @@ void testrefreshExpr(void)
 		"a - (b - c)",
 		"(a - b) - c",
 		"f(x) = x + 5, x = 2, y = 3",
+		"f () x, y",
+		"f(x + dx, y + dy) * g(h(z + dz), 5)",
 		NULL
 	};
 	Expr *p = NULL;

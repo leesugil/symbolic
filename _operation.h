@@ -494,10 +494,6 @@ void charComma(char w[], char *x, char *y)
 {
 	binaryCharFunction(w, x, y, ", ");
 }
-void charCommaComm(char w[], char *x, char *y)
-{
-	commBinaryCharFunction(w, x, y, ", ");
-}
 void charCommaRightAssoc(char w[], char *a, char *b, char *c)
 {
 	rightAssocCharFunction(w, a, b, c, ", ");
@@ -567,6 +563,31 @@ void charNeq(char w[], char *x, char *y)
 void charNeqRightAssoc(char w[], char *a, char *b, char *c)
 {
 	rightAssocCharFunction(w, a, b, c, " != ");
+}
+
+/***************************
+ * " () "
+ * *************************/
+void charFuncOf(char w[], char *f, char *x)
+{
+	//binaryCharFunction(w, x, y, ", ");
+	//f () x == f(x)
+	strcpy(w, f);
+	strcat(w, "(");
+	strcat(w, x);
+	strcat(w, ")");
+}
+void charFuncOfRightAssoc(char w[], char *f, char *g, char *x)
+{
+	//rightAssocCharFunction(w, a, b, c, ", ");
+	//f () g () x == f(g(x))
+	strcpy(w, f);
+	strcat(w, "(");
+	strcat(w, g);
+	strcat(w, "(");
+	strcat(w, x);
+	strcat(w, ")");
+	strcat(w, ")");
 }
 
 
@@ -836,7 +857,7 @@ Op *loadOps(Op *p)
 	comma.right2left_assoc_by[0][1] = NULL;
 	comma.right2left_assoc_by[0][2] = NULL;
 	comma.left_assoc_by = NULL;
-	comma.comm = charCommaComm;
+	comma.comm = NULL;
 	comma.right_unit = NULL;
 	comma.left_unit = NULL;
 
@@ -1062,6 +1083,42 @@ Op *loadOps(Op *p)
 	neq.left_unit = NULL;
 
 
+	/***************************
+	 * " () "
+	 * *************************/
+	Op funcof;
+
+	funcof.name = " () ";
+	funcof.short_name = "()";
+	funcof.f = NULL;
+	funcof.char_f = charFuncOf;
+	funcof.char_f_alt = NULL;
+	funcof.inverse = NULL;
+	funcof.left_dist_over[0] = NULL;
+	funcof.left_dist_over_by[0][0] = NULL;
+	funcof.left_dist_over_by[0][1] = NULL;
+	funcof.left_dist_over_by[0][2] = NULL;
+	funcof.left_dist_over_char_f = NULL;
+	funcof.right_dist_over[0] = NULL;
+	funcof.right_dist_over_by[0][0] = NULL;
+	funcof.right_dist_over_by[0][1] = NULL;
+	funcof.right_dist_over_by[0][2] = NULL;
+	funcof.right_dist_over_char_f = NULL;
+	funcof.left_assoc = NULL;
+	funcof.right_assoc = charFuncOfRightAssoc;
+	funcof.left2right_assoc_by[0][0] = NULL;
+	funcof.left2right_assoc_by[0][1] = NULL;
+	funcof.left2right_assoc_by[0][2] = NULL;
+	funcof.right_assoc_by = NULL;
+	funcof.right2left_assoc_by[0][0] = NULL;
+	funcof.right2left_assoc_by[0][1] = NULL;
+	funcof.right2left_assoc_by[0][2] = NULL;
+	funcof.left_assoc_by = NULL;
+	funcof.comm = NULL;
+	funcof.right_unit = NULL;
+	funcof.left_unit = NULL;
+
+
 	p = addOp(p, comma);
 	p = addOp(p, let);
 	
@@ -1078,6 +1135,8 @@ Op *loadOps(Op *p)
 	p = addOp(p, multiplication);
 	p = addOp(p, exponentiation);
 	p = addOp(p, modulo);
+
+	p = addOp(p, funcof);
 
 
 
