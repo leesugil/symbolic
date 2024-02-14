@@ -187,6 +187,7 @@ void listSymb(Symb *p)
 {
 	if (p != NULL) {
 		listSymb(p->left);
+		printf("****************\n");
 		if (strlen(p->full_name) > 0)
 			printf("\"%s\" = ", p->full_name);
 		else
@@ -201,7 +202,6 @@ void listSymb(Symb *p)
 		printf("--- variables\n");
 		for (int i = 0; i < MAXVAR && p->var[i] != NULL; i++)
 			listVar(p->var[i]);
-		printf("****************\n");
 		listSymb(p->right);
 	}
 }
@@ -408,7 +408,8 @@ Symb *updateSymbFullName(Symb *p)
 	Var *v;
 	char line[MAXCHAR] = "";
 	for (int i = 0; i < MAXVAR && (v = p->var[i]) != NULL; i++) {
-		sprintf(line, "%s, ", v->initname);
+		//sprintf(line, "%s, ", v->initname);	this feature has been replaced by running restoreVarName and then updateSymbFullName
+		sprintf(line, "%s, ", v->name);
 		strcat(p->full_name, line);
 	}
 	bcutnstr(p->full_name, 2);
@@ -417,7 +418,63 @@ Symb *updateSymbFullName(Symb *p)
 	return p;
 }
 
-/* evalSymb: "f(y)" ==> scan "f(", eval y, eval f(eval(y)), record in w */
+Var *_updateVarName2Formula(Var *p)
+{
+	if (p == NULL || p->expr == NULL)
+		return p;
+
+	p->right = _updateVarName2Formula(p->right);
+
+	char line[MAXCHAR] = "";
+	strcpy(line, p->name);
+	parenthstr(line);
+	strcpy(p->expr->name, line);		// parenthstr needed because this update doesn't change p->expr->op which is the determinant of putting parenthesis when refreshing an Expr.
+
+	return p;
+}
+Symb *updateVarName(Symb *p, char *name)
+{
+	char *prog = "updateVarName";
+
+	if (p == NULL || name == NULL || strlen(name) == 0)
+		return p;
+
+	Var *v;
+	char var_name[MAXCHAR] = "";
+	for (int i = 0; i < MAXVAR && (v = p->var[i]) != NULL; i++) {
+		name = _parseVarName(var_name, name);
+		if (name == NULL) {
+			fprintf(stderr, "%s: there is a mismatch in the number of arguments provided in name and the actual number of argument registered in the symbol.\n", prog);
+			return p;
+		}
+		if (v->expr == NULL) {
+			fprintf(stderr, "%s: wire Var to Symb->formula first\n", prog);
+			return p;
+		}
+		strcpy(v->name, var_name);
+		/* update them in formula Expr as well */
+		v = _updateVarName2Formula(v);
+	}
+
+	p->formula = refreshExprName(p->formula);
+
+	return p;
+}
+Symb *restoreVarName(Symb *p)
+{
+	if (p == NULL || strlen(p->full_name) == 0)
+		return p;
+
+	Var *v = NULL;
+	for (int i = 0; i < MAXVAR && (v = p->var[i]) != NULL; i++)
+		strcpy(v->name, v->initname);
+	p = updateSymbFullName(p);
+	p = updateVarName(p, p->full_name);
+
+	return p;
+}
+
+/* evalSymb: "f(y, g)" ==> scan "f(", eval y, eval g, eval f(eval(y), eval(g)), record in w */
 void evalSymb(char w[], char *name, Symb *tree)
 {
 	char *prog = "evalSymb";
@@ -429,17 +486,74 @@ void evalSymb(char w[], char *name, Symb *tree)
 	char func_name[MAXCHAR] = "", symb_name[MAXCHAR] = "";
 	parseFuncName(func_name, name);		// f( or ""
 	parseSymbName(symb_name, name);
-	Symb *s = getSymb(tree, symb_name);
-	if (s == NULL)
-		return ;
-	if (strlen(func_name) == 0) {
+	Symb *p = getSymb(tree, symb_name);
+	if (p == NULL || strlen(func_name) == 0) {
 		strcpy(w, symb_name);
 		return ;
 	}
-	if (strcmp(func_name, s->func_name) != 0) {
-		fprintf(stderr, "%s: critical error: parsed function name \"%s\" is different from the function name found \"%s\" in the Symb tree\n", prog, func_name, s->func_name);
+	if (strcmp(func_name, p->func_name) != 0) {
+		fprintf(stderr, "%s: critical error: parsed function name \"%s\" is different from the function name found \"%s\" in the Symb tree\n", prog, func_name, p->func_name);
 		return ;
 	}
+	/* make a copy of s? maybe not needed. instead call restoreVarName at the end of each of this call.
+	 * restoreVarName added.
+	 * (without restoreVarName, the expression for the formula of a Symb from listSymb could be funny as the static full_name and dynamic formula->name are used at the same time. */
+	p = updateVarName(p, name);		/* s->expr->name now updated, like
+									 f(x) = x + 2
+									 ==> f(y) = (y) + 2.
+
+									 next step: see if y = g(z) in Symb,
+									 if so,
+									 f(y) = (y) + 2
+									 ==> f(g(z)) = (g(z)) + 2
+									 
+									 this could've been done at once
+									 by just working on
+									 f(y)
+									 ==> f(g(z))
+									 ==> f(g(z(x)))
+									 ==> f(g(x^2 + 1))
+									 ==> f(2 * (x^2 + 1) + 3)
+									 and running updateVarName once. */
+	fprintf(stderr, "%s:listSymb of p->name:%s(before)\n", prog, p->name);
+	listSymb(p);
+	Var *v = NULL;
+	char line[MAXCHAR] = "";
+	for (int i = 0; i < MAXVAR && (v = p->var[i]) != NULL; i++) {
+		evalSymb(line, v->name, tree);
+		fprintf(stderr, "%s:at p:%s, var[i]->name:%s(before)\n", prog, p->name, v->name);
+		strcpy(v->name, line);
+		fprintf(stderr, "%s:at p:%s, var[i]->name:%s(after)\n", prog, p->name, v->name);
+	}
+	fprintf(stderr, "%s:full_name:%s(before)\n", prog, p->full_name);
+	p = updateSymbFullName(p);
+	fprintf(stderr, "%s:full_name:%s(after)\n", prog, p->full_name);
+	p = updateVarName(p, p->full_name);
+	fprintf(stderr, "%s:listSymb of p->name:%s(after)\n", prog, p->name);
+	listSymb(p);
+	strcpy(w, p->formula->name);
+	p = restoreVarName(p);
+}
+void testevalSymb(void)
+{
+	op_tree = loadOps(op_tree);
+	Symb *p = NULL;
+	char *name = "f(x)";
+	char *line = "2 * x + 3";
+	p = addSymb(p, name, line);
+
+	name = "g(x)";
+	line = "x^2 + 1";
+	p = addSymb(p, name, line);
+
+	listSymb(p);
+
+	char w[MAXCHAR] = "";
+	evalSymb(w, "f(g(x))", p);
+	printf("testevalSymb:\"%s\"\n", w);
+
+	printf("testevalSymb: how functions are stored in memory after this call\n");
+	listSymb(p);
 }
 
 
