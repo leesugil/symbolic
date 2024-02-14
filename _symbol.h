@@ -447,10 +447,10 @@ Symb *updateVarName(Symb *p, char *name)
 			fprintf(stderr, "%s: there is a mismatch in the number of arguments provided in name and the actual number of argument registered in the symbol.\n", prog);
 			return p;
 		}
-		if (v->expr == NULL) {
-			fprintf(stderr, "%s: wire Var to Symb->formula first\n", prog);
-			return p;
-		}
+		//if (v->expr == NULL) {	/* f(x, y) = x */
+		//	fprintf(stderr, "%s: wire Var to Symb->formula first\n", prog);
+		//	return p;
+		//}
 		strcpy(v->name, var_name);
 		/* update them in formula Expr as well */
 		v = _updateVarName2Formula(v);
@@ -538,22 +538,19 @@ void testevalSymb(void)
 {
 	op_tree = loadOps(op_tree);
 	Symb *p = NULL;
-	char *name = "f(x)";
-	char *line = "2 * x + 3";
+	char *name = "f(x, y, z)";
+	char *line = "2 * x + 3 - z";
 	p = addSymb(p, name, line);
 
-	name = "g(x)";
-	line = "x^2 + 1";
+	name = "g(x, y, z)";
+	line = "x^2 + 1 - z";
 	p = addSymb(p, name, line);
 
 	listSymb(p);
 
 	char w[MAXCHAR] = "";
-	evalSymb(w, "f(g(x))", p);
+	evalSymb(w, "f(g(x, y, z), y, z)", p);
 	printf("testevalSymb:\"%s\"\n", w);
-
-	printf("testevalSymb: how functions are stored in memory after this call\n");
-	listSymb(p);
 }
 
 
