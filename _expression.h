@@ -696,6 +696,8 @@ Expr *refreshExprNode(Expr *p)
 /* refreshExprNodeName: refreshExprNode but only updates name, no re-branching */
 Expr *refreshExprNodeName(Expr *p)
 {
+	char *prog = "refreshExprNodeName";
+
 	if (p->left == NULL || p-> right == NULL)
 		return p;
 
@@ -716,9 +718,12 @@ Expr *refreshExprNodeName(Expr *p)
 			strcmp(p->right->op, " = ") != 0)
 		parenthstr(right);
 	Op *op = getOp(op_tree, p->op);
-	if (op != NULL)
+	if (op != NULL) {
 		op->char_f(p->name, left, right);
-	else {
+		fprintf(stdout, "%s: left: \"%s\"\n", prog, left);
+		fprintf(stdout, "%s: op: \"%s\"\n", prog, op->name);
+		fprintf(stdout, "%s: right: \"%s\"\n", prog, right);
+	} else {
 		strcpy(p->name, left);
 		strcat(p->name, p->op);
 		strcat(p->name, right);

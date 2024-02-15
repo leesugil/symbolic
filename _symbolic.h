@@ -8,7 +8,6 @@
 
 #include "symbol.h"
 #include "expression.h"
-#include "function.h"
 
 
 
@@ -36,31 +35,12 @@ Symb *updateSymb(Symb *p, Expr *q)
 	p = updateSymb(p, q->right);
 
 	char line[MAXCHAR] = "";
-	char func_name[MAXCHAR] = "", symb_name[MAXCHAR] = "";
-	Func *r;
+	char *right = (q->right == NULL) ? NULL : q->right->name;
 
 	if (strcmp(q->op, " = ") == 0 || strcmp(q->op, " =") == 0) {
-		/* add/update symbol and function */
+		/* add/update symbol */
 		fprintf(stderr, "%s: add/update a symbol with \"%s\" = \"%s\"\n", prog, q->left->name, q->right->name);
-		sprintf(line, "%s", q->left->name);
-		parseFuncName(func_name, line);		// f or f(
-		strcpy(symb_name, func_name);
-		if (symb_name[strlen(symb_name) - 1] == '(')	// f(
-			bcutstr(symb_name);							// f
-		if (q->right == NULL) {
-			/* f = or f(x, y) = */
-			p = addSymb(p, symb_name, "");
-			r = getFunc(func_tree, func_name);
-			removeFunc(&r);
-		} else {
-			/* g = f or g(x) = f(x) */
-			/* f = x^2 or f(x, y) = x^2 + x * y + y^2 */
-			p = addSymb(p, symb_name, q->right->name);
-			r = getFunc(func_tree, func_name);
-			removeFunc(&r);
-			if (strcmp(symb_name, func_name) != 0)
-				func_tree = addFunc(func_tree, q->left->name, q->right->name);
-		}
+		p = addSymb(p, q->left->name, right);
 	}
 
 	return p;
@@ -79,14 +59,10 @@ void testupdateSymb(void)
 	printf("--before updating symb\n");
 	printf("-- listSymb\n");
 	listSymb(symb_tree);
-	printf("-- listFunc\n");
-	listFunc(func_tree);
 	printf("--testupdateSymb\n");
 	symb_tree = updateSymb(symb_tree, p);
 	printf("-- listSymb\n");
 	listSymb(symb_tree);
-	printf("-- listFunc\n");
-	listFunc(func_tree);
 
 	line = "f(x, y) = x^2 + x * y + y^2";
 	printf("-- the case %s\n", line);
@@ -97,8 +73,6 @@ void testupdateSymb(void)
 	listExpr(p);
 	printf("-- listSymb\n");
 	listSymb(symb_tree);
-	printf("-- listFunc\n");
-	listFunc(func_tree);
 }
 
 /* now, updating linked symbols could be tricky.
@@ -133,41 +107,27 @@ Expr *_updateExpr(Expr *p, Symb *root)
 	if (p == NULL)
 		return NULL;
 
-	fprintf(stderr, "%s:\n", prog);
+	fprintf(stdout, "%s: p->name:\"%s\"\n", prog, p->name);
 
 	Symb *q = NULL;
 	/* check if of the form f(x + dx, y)
 	 * if so, update the function, update f in Symb, and call f */
 	char func_name[MAXCHAR] = "", symb_name[MAXCHAR] = "";
 	parseFuncName(func_name, p->name);
-	fprintf(stderr, "%s: func_name \"%s\" is parsed from p->name \"%s\"\n", prog, func_name, p->name);
-	strcpy(symb_name, func_name);
-	if (symb_name[strlen(symb_name) - 1] == '(')
-		bcutstr(symb_name);
-	fprintf(stderr, "%s: symb_name \"%s\"\n", prog, symb_name);
+	parseSymbName(symb_name, p->name);
+	fprintf(stdout, "%s: func_name \"%s\" is parsed from p->name \"%s\"\n", prog, func_name, p->name);
+	fprintf(stdout, "%s: symb_name \"%s\"\n", prog, symb_name);
 	if (strlen(symb_name) == 0)
 		return p;
 	if ((q = getSymb(root, symb_name)) != NULL) {			/* f */
-		fprintf(stderr, "%s: symb_name %s detected in the symbol tree\n", prog, symb_name);
-		/* case 1) f( */
-		/* case 2) f */
-		if (strcmp(func_name, symb_name) != 0) {
-			/* f( */
-			/* check if f( is registered in func_tree.
-			 * if so, update func_tree using p->name because it could've been f(x + dx, y). then update symb_tree to update the formula for the symbol f.
-			 * if not, pass. it should've been added with updateSymb. */
-			fprintf(stderr, "%s: %s requires updating %s, calling updateFunc...\n", prog, func_name, symb_name);
-			func_tree = updateFunc(func_tree, p->name);
-			fprintf(stderr, "%s: func_tree updated\n", prog);
-		}
-		/* update p->name by the formula of f found in symb_tree */
-		if (strcmp(q->formula, "") != 0) {
-			fprintf(stderr, "%s: \"%s\" will be replaced by \"%s\"\n", prog, p->name, q->formula);
-			strcpy(p->name, q->formula);
-			p = parseExpr(p);
-		}
+		fprintf(stdout, "%s: symb_name \"%s\" detected in the symbol tree\n", prog, symb_name);
+		char line[MAXCHAR] = "";
+		evalSymb(line, p->name, root);
+		printf("########### evaluated \"%s\":%s\n", symb_name, line);
+		parenthstr(line);
+		removeExpr(&p);
+		p = addExpr(p, line);
 	}
-
 
 	return p;
 }
@@ -175,11 +135,28 @@ Expr *updateExpr(Expr *p, Symb *root) {
 	if (p == NULL)
 		return NULL;
 
+	//p = _updateExpr(p, root);
+
 	p->left = updateExpr(p->left, root);
 	p->right = updateExpr(p->right, root);
 
 	p = refreshExprNode(p);
 	p = _updateExpr(p, root);
+
+	/* problem:
+	 * because it's reading the tree postorder traversally,
+	 * for the following example
+	 * f(x + 1, y)
+	 *    /     \
+	 *   f      x + 1, y
+	 *            /   \
+	 *         x + 1   y
+	 *          / \
+	 *         x   1
+	 * f is read first and replaced by f(x, y).
+	 * at f, there's no way to read the upper node, suggesting that
+	 * postorder traversal doesn't work.
+	 * should progress preorder traversally. */
 
 	return p;
 }
@@ -191,10 +168,10 @@ void testupdateExpr(void)
 	char *line = NULL;
 	line = "x = 5, y = 6, f(x, y) = a * x^2 + b * x^1 + y";
 	p = addExpr(p, line);
-	printf("symbol registration\n");
+	printf("initial Expr provided:\n");
 	listExpr(p);
+	printf("\nupdated Symb tree\n");
 	symb_tree = updateSymb(symb_tree, p);
-	printf("\nsymbol tree\n");
 	listSymb(symb_tree);
 	
 	removeExpr(&p);
