@@ -166,13 +166,19 @@ Symb *addSymb(Symb *p, char *name, char *formula)
 		p->left = NULL;
 		p->right = NULL;
 	} else if ((cond = strcmp(symb_name, p->name)) == 0) {
-		/* could be re-defining f(x) or deleting it*/
-		Symb *left = p->left;
-		Symb *right = p->right;
-		removeSymb(&p);
-		p = addSymb(p, name, formula);
-		p->left = left;
-		p->right = right;
+		strcpy(p->name, symb_name);
+		strcpy(p->func_name, func_name);
+		p->full_name[0] = '\0';
+		if (p->formula != NULL)
+			removeExpr(&(p->formula));
+		p->formula = NULL;
+		if (formula != NULL)
+			p->formula = addExpr(p->formula, formula);
+		for (int i = 0; i < MAXVAR; i++)
+			removeVar(&(p->var[i]));
+		p = parseVarName(p, name);
+		p = wireVar2Formula(p);
+		p = updateSymbFullName(p);
 	} else if (cond < 0) {
 		p->left = addSymb(p->left, name, formula);
 	} else {
@@ -277,11 +283,15 @@ void parseSymbName(char w[], char *name)
 	w[0] = '\0';
 	if (name == NULL)
 		return;
+	/* case f(x, y) * z */
 
 	char *s = strstr(name, "(");
 	if (s != NULL) {
-		strncpy(w, name, s - name);
-		w[s - name] = '\0';
+		parseFuncName(w, name);
+		if (strlen(w) > 0)
+			bcutstr(w);
+		//strncpy(w, name, s - name);
+		//w[s - name] = '\0';
 	} else
 		strcpy(w, name);
 }
@@ -292,7 +302,11 @@ void parseFuncName(char w[], char *name)
 	w[0] = '\0';
 	if (name == NULL)
 		return;
+	/* case f(x, y) * z */
+	if (strlen(name) == 0 || name[strlen(name) - 1] != ')')
+		return;
 
+	/* case f((x)) */
 	char *s = strstr(name, "(");
 	if (s != NULL) {
 		strncpy(w, name, s - name + 1);
@@ -325,19 +339,22 @@ Symb *parseVarName(Symb *p, char *name)		// p->var[i]->name
 }
 char *_parseVarName(char w[], char *name)
 {
+	char *prog = "_parseVarName";
 	/* consider complicated case such as f(g(x), h(x, i(y)), z) */
+	/* or f((x)) which only x should be parsed */
 	w[0] = '\0';
 	if (name == NULL || strlen(name) == 0)
 		return name;
 	if (name[strlen(name) - 1] != ')')
 		return name;
 	char *p = name;
+	/* f((x), (y), z) or  (y), z) */
 	if (is_blocked_properly_blk(name, block_start, block_end, NULL)) {
 		/* f(g(x), h(x, i(y)), z) */
 		/* skip f( */
-		p = strstr(name, "(");
+		p = strstr(name, "(");			// ((x))
 		if (p != NULL)
-			p++;
+			p++;						//  (x))
 		else
 			p = name;
 	}
@@ -357,6 +374,10 @@ char *_parseVarName(char w[], char *name)
 	w[q - p] = '\0';
 	while (isspace(w[strlen(w) - 1]))
 		w[strlen(w) - 1] = '\0';
+	fprintf(stderr, "%s: parsed variable name: \"%s\"\n", prog, w);
+	while (is_outer_blocked_blk(w, block_start, block_end, NULL))
+		remove_outer_block_blk(w, block_start, block_end);
+	fprintf(stderr, "%s: blocks removed: \"%s\"\n", prog, w);
 	
 	return ++q;
 }
@@ -406,10 +427,13 @@ Symb *updateSymbFullName(Symb *p)
 	}
 	strcpy(p->full_name, p->func_name);
 	Var *v;
-	char line[MAXCHAR] = "";
+	char line[MAXCHAR] = "", var_name[MAXCHAR] = "";
 	for (int i = 0; i < MAXVAR && (v = p->var[i]) != NULL; i++) {
 		//sprintf(line, "%s, ", v->initname);	this feature has been replaced by running restoreVarName and then updateSymbFullName
-		sprintf(line, "%s, ", v->name);
+		strcpy(var_name, v->name);
+		while (is_outer_blocked_blk(var_name, block_start, block_end, NULL))
+			remove_outer_block_blk(var_name, block_start, block_end);
+		sprintf(line, "%s, ", var_name);
 		strcat(p->full_name, line);
 	}
 	bcutnstr(p->full_name, 2);
@@ -429,8 +453,20 @@ Var *_updateVarName2Formula(Var *p)
 	strcpy(line, p->name);
 	parenthstr(line);
 	strcpy(p->expr->name, line);		// parenthstr needed because this update doesn't change p->expr->op which is the determinant of putting parenthesis when refreshing an Expr.
+										// this yields f((x))
 
 	return p;
+}
+Var *_updateVarName(Var *v, char *name)
+{
+	if (v == NULL || name == NULL || strlen(name) == 0)
+		return v;
+
+	v->right = _updateVarName(v->right, name);
+
+	strcpy(v->name, name);
+
+	return v;
 }
 Symb *updateVarName(Symb *p, char *name)
 {
@@ -447,11 +483,7 @@ Symb *updateVarName(Symb *p, char *name)
 			fprintf(stderr, "%s: there is a mismatch in the number of arguments provided in name and the actual number of argument registered in the symbol.\n", prog);
 			return p;
 		}
-		//if (v->expr == NULL) {	/* f(x, y) = x */
-		//	fprintf(stderr, "%s: wire Var to Symb->formula first\n", prog);
-		//	return p;
-		//}
-		strcpy(v->name, var_name);
+		v = _updateVarName(v, var_name);
 		/* update them in formula Expr as well */
 		v = _updateVarName2Formula(v);
 	}
@@ -478,27 +510,58 @@ Symb *restoreVarName(Symb *p)
 void evalSymb(char w[], char *name, Symb *tree)
 {
 	char *prog = "evalSymb";
+	fprintf(stderr, "%s: START \n", prog);
 
 	if (w == NULL || name == NULL || tree == NULL)
 		return ;
 	w[0] = '\0';
 
+	while (is_outer_blocked_blk(w, block_start, block_end, NULL))
+		remove_outer_block_blk(w, block_start, block_end);
+
 	char func_name[MAXCHAR] = "", symb_name[MAXCHAR] = "";
 	parseFuncName(func_name, name);		// f( or ""
 	parseSymbName(symb_name, name);
+
+	fprintf(stderr, "%s: input name: \"%s\"\n", prog, name);
+	fprintf(stderr, "%s: func_name: \"%s\"\n", prog, func_name);
+	fprintf(stderr, "%s: symb_name: \"%s\"\n", prog, symb_name);
+
 	Symb *p = getSymb(tree, symb_name);
-	if (p == NULL || strlen(p->func_name) == 0) {
-		strcpy(w, symb_name);	// no need to parenthesize
-		return ;
+	if (p == NULL) {
+			strcpy(w, symb_name);	// no need to parenthesize
+			fprintf(stderr, "%s: \"%s\" not found in the symbol tree\n", prog, symb_name);
+			return ;
+	}
+	/* g = G * M * m / r^2
+	 * g */
+	if (strlen(p->func_name) == 0) {
+		if (p->formula != NULL) {
+			if (strlen(p->formula->name) > 0) {
+				evalSymb(w, p->formula->name, tree);
+				parenthstr(w);
+			} else
+				strcpy(w, symb_name);
+			fprintf(stderr, "%s: evaluated formula = \"%s\"\n", prog, w);
+			fprintf(stderr, "%s: END \n", prog);
+			return;
+		} else {
+			strcpy(w, symb_name);	// no need to parenthesize
+			fprintf(stderr, "%s: evaluated formula = \"%s\"\n", prog, w);
+			fprintf(stderr, "%s: END \n", prog);
+			return ;
+		}
 	}
 	if (strcmp(func_name, p->func_name) != 0) {
 		/* return the initially registered form */
-		fprintf(stdout, "%s: symbol info found but argument information mismatch, returning the originally registered form\n", prog);
-		fprintf(stdout, "%s: input \"%s\"\n", prog, name);
-		fprintf(stdout, "%s: func_name \"%s\"\n", prog, func_name);
-		fprintf(stdout, "%s: p->func_name \"%s\"\n", prog, p->func_name);
+		fprintf(stderr, "%s: symbol info found but argument information mismatch, returning the originally registered form\n", prog);
+		fprintf(stderr, "%s: input \"%s\"\n", prog, name);
+		fprintf(stderr, "%s: func_name \"%s\"\n", prog, func_name);
+		fprintf(stderr, "%s: p->func_name \"%s\"\n", prog, p->func_name);
 		p = restoreVarName(p);
+		fprintf(stderr, "%s: returning p->formula->name \"%s\"\n", prog, p->formula->name);
 		strcpy(w, p->formula->name);
+		fprintf(stderr, "%s: END \n", prog);
 		return ;
 	}
 	/* make a copy of s? maybe not needed. instead call restoreVarName at the end of each of this call.
@@ -522,6 +585,7 @@ void evalSymb(char w[], char *name, Symb *tree)
 									 ==> f(2 * (x^2 + 1) + 3)
 									 and running updateVarName once. */
 	fprintf(stderr, "%s:listSymb of p->name:%s(before)\n", prog, p->name);
+	//listSymb(p);
 	listSymb(p);
 	Var *v = NULL;
 	char line[MAXCHAR] = "";
@@ -536,16 +600,19 @@ void evalSymb(char w[], char *name, Symb *tree)
 	fprintf(stderr, "%s:full_name:%s(after)\n", prog, p->full_name);
 	p = updateVarName(p, p->full_name);
 	fprintf(stderr, "%s:listSymb of p->name:%s(after)\n", prog, p->name);
+	//listSymb(p);
 	listSymb(p);
 	strcpy(w, p->formula->name);
 	p = restoreVarName(p);
+
+	fprintf(stderr, "%s: END \n", prog);
 }
 void testevalSymb(void)
 {
 	op_tree = loadOps(op_tree);
 	Symb *p = NULL;
 	char *name = "f(x, y, z)";
-	char *line = "2 * x + 3 - z";
+	char *line = "2 * x + 3 * x - z";
 	p = addSymb(p, name, line);
 
 	name = "g(x, y, z)";
@@ -556,6 +623,9 @@ void testevalSymb(void)
 
 	char w[MAXCHAR] = "";
 	evalSymb(w, "f(g(x, y, z), y, z)", p);
+	printf("testevalSymb:\"%s\"\n", w);
+
+	evalSymb(w, "f(x + 1, y, z)", p);
 	printf("testevalSymb:\"%s\"\n", w);
 }
 

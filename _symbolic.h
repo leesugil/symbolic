@@ -9,15 +9,6 @@
 #include "symbol.h"
 #include "expression.h"
 
-
-
-
-
-
-
-
-
-
 /* updateSymb: a function to
  * read an Expr-tree,
  * recognize p->op == " = ",
@@ -100,34 +91,87 @@ void testupdateSymb(void)
  * and then keep proceeding to the updated q->left, q->right */
 /* parseExpr added */
 
+Expr *__updateExpr(Expr *p, Symb *root)
+{
+	char *prog = "__updateExpr";
+
+	if (p == NULL)
+		return NULL;
+
+	fprintf(stderr, "%s: START\n", prog);
+	fprintf(stderr, "%s: p->name:\"%s\"\n", prog, p->name);
+
+	Symb *q = NULL;
+	/* check if of the form f(x + dx, y)
+	 * if so, update the function, update f in Symb, and call f */
+	/* g = G * M * m / r^2
+	 * g */
+	char func_name[MAXCHAR] = "", symb_name[MAXCHAR] = "";
+	parseFuncName(func_name, p->name);
+	parseSymbName(symb_name, p->name);
+	/* h(x) = f(x) */
+	fprintf(stderr, "%s: func_name \"%s\" is parsed from p->name \"%s\"\n", prog, func_name, p->name);
+	fprintf(stderr, "%s: symb_name \"%s\"\n", prog, symb_name);
+	if (strlen(symb_name) > 0) {
+		if ((q = getSymb(root, symb_name)) != NULL) {			/* f */
+			fprintf(stderr, "%s: symb_name \"%s\" detected in the symbol tree\n", prog, symb_name);
+			char line[MAXCHAR] = "", prev[MAXCHAR] = "";
+			fprintf(stderr, "%s: evaluating \"%s\"...\n", prog, p->name);
+			// the problem is when
+			// the evaluated result is
+			// like h ==> f((x))
+			// and then reading left from here
+			// withouth further updating f((x)).
+			// what if h(x) = f(g(x)) so
+			// h ==> f(g(x))
+			//   ==> g(x)
+			//   ==> x^2 + 1
+			// evalSymb is required?
+			// no, when evalSymb(x^2 + 1), this logic fails.
+			//do {
+			//	strcpy(prev, line);
+			//	evalSymb(line, p->name, root);
+			//	parenthstr(line);
+			//	removeExpr(&p);
+			//	p = addExpr(p, line);
+			//} while (strcmp(prev, line) != 0);
+			evalSymb(line, p->name, root);
+			fprintf(stderr, "%s: ########### evaluated \"%s\":%s\n", prog, symb_name, line);
+			parenthstr(line);
+			removeExpr(&p);
+			p = addExpr(p, line);
+			listExpr(p);
+		} else
+			fprintf(stderr, "%s: symbol not found, no changes made\n", prog);
+	}
+
+	//fprintf(stderr, "%s: moving to left from \"%s\"\n", prog, p->name);
+	//p->left = __updateExpr(p->left, root);
+	//fprintf(stderr, "%s: moving to right from \"%s\"\n", prog, p->name);
+	//p->right = __updateExpr(p->right, root);
+
+	fprintf(stderr, "%s: END\n", prog);
+
+	return p;
+}
 Expr *_updateExpr(Expr *p, Symb *root)
 {
 	char *prog = "_updateExpr";
 
 	if (p == NULL)
-		return NULL;
-
-	fprintf(stdout, "%s: p->name:\"%s\"\n", prog, p->name);
-
-	Symb *q = NULL;
-	/* check if of the form f(x + dx, y)
-	 * if so, update the function, update f in Symb, and call f */
-	char func_name[MAXCHAR] = "", symb_name[MAXCHAR] = "";
-	parseFuncName(func_name, p->name);
-	parseSymbName(symb_name, p->name);
-	fprintf(stdout, "%s: func_name \"%s\" is parsed from p->name \"%s\"\n", prog, func_name, p->name);
-	fprintf(stdout, "%s: symb_name \"%s\"\n", prog, symb_name);
-	if (strlen(symb_name) == 0)
 		return p;
-	if ((q = getSymb(root, symb_name)) != NULL) {			/* f */
-		fprintf(stdout, "%s: symb_name \"%s\" detected in the symbol tree\n", prog, symb_name);
-		char line[MAXCHAR] = "";
-		evalSymb(line, p->name, root);
-		printf("########### evaluated \"%s\":%s\n", symb_name, line);
-		parenthstr(line);
-		removeExpr(&p);
-		p = addExpr(p, line);
-	}
+
+	char prev[MAXCHAR] = "";
+
+	do {
+		strcpy(prev, p->name);
+		p = __updateExpr(p, root);
+	} while (strcmp(prev, p->name) != 0);
+
+	fprintf(stderr, "%s: moving to left from \"%s\"\n", prog, p->name);
+	p->left = __updateExpr(p->left, root);
+	fprintf(stderr, "%s: moving to right from \"%s\"\n", prog, p->name);
+	p->right = __updateExpr(p->right, root);
 
 	return p;
 }
@@ -135,16 +179,11 @@ Expr *updateExpr(Expr *p, Symb *root) {
 	if (p == NULL)
 		return NULL;
 
-	//p = _updateExpr(p, root);
-
-	p->left = updateExpr(p->left, root);
-	p->right = updateExpr(p->right, root);
-
-	p = refreshExprNode(p);
 	p = _updateExpr(p, root);
+	//listExpr(p);
+	p = refreshExpr(p);
 
-	/* problem:
-	 * because it's reading the tree postorder traversally,
+	/* because it's reading the tree postorder traversally,
 	 * for the following example
 	 * f(x + 1, y)
 	 *    /     \

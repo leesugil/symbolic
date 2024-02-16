@@ -11,7 +11,6 @@ int main()
 {
 	op_tree = loadOps(op_tree);
 	symb_tree = loadSymb(symb_tree);
-	func_tree = loadFunc(func_tree);
 	Expr *p = NULL;
 	char line[MAXCHAR] = "";
 
@@ -32,9 +31,20 @@ int main()
 	char *s = NULL;
 	size_t maxline = 0;
 	while (getline(&s, &maxline, stdin) > 0) {
+		printf("listSymb (before)\n");
+		listSymb(symb_tree);
 		removeExpr(&p);
 		p = addExpr(p, s);
-		p = processExpr(p);
+		/* flow control */
+		if (strstr(s, " = ") != NULL ||
+				strstr(s, ", ") != NULL) {
+			p = addExpr(p, line);
+			symb_tree = updateSymb(symb_tree, p);
+			printf("listSymb (after)\n");
+			listSymb(symb_tree);
+		} else {
+			p = processExpr(p);
+		}
 		if (strcmp(p->op, ", ") != 0 &&
 				strcmp(p->op, " = ") != 0) {
 			//clear();
@@ -64,13 +74,13 @@ Expr *processExpr(Expr *p)
 	if (p == NULL)
 		return NULL;
 
-	symb_tree = updateSymb(symb_tree, p);
+	//symb_tree = updateSymb(symb_tree, p);
 
 	char prev_p[MAXCHAR] = "";
 	do {
 		strcpy(prev_p, p->name);
-		p = updateExpr(p, symb_tree);	// for g(x) = f(x) case. working?
-	} while (strcmp(prev_p, p->name) != 0)
+		p = updateExpr(p, symb_tree);
+	} while (strcmp(prev_p, p->name) != 0);
 
 	do {
 		strcpy(prev_p, p->name);

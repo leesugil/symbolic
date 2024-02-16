@@ -720,9 +720,9 @@ Expr *refreshExprNodeName(Expr *p)
 	Op *op = getOp(op_tree, p->op);
 	if (op != NULL) {
 		op->char_f(p->name, left, right);
-		fprintf(stdout, "%s: left: \"%s\"\n", prog, left);
-		fprintf(stdout, "%s: op: \"%s\"\n", prog, op->name);
-		fprintf(stdout, "%s: right: \"%s\"\n", prog, right);
+		fprintf(stderr, "%s: left: \"%s\"\n", prog, left);
+		fprintf(stderr, "%s: op: \"%s\"\n", prog, op->name);
+		fprintf(stderr, "%s: right: \"%s\"\n", prog, right);
 	} else {
 		strcpy(p->name, left);
 		strcat(p->name, p->op);
