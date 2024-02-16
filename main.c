@@ -80,19 +80,35 @@ Expr *processExpr(Expr *p)
 	do {
 		strcpy(prev_p, p->name);
 		p = updateExpr(p, symb_tree);
+		p = sortExpr(p);
 	} while (strcmp(prev_p, p->name) != 0);
 
 	do {
+		printf("***************\n***p->name (LOOP START)\"%s\"\n", p->name);
 		strcpy(prev_p, p->name);
+		p = sortExpr(p);
+		printf("***************\n***p->name after sortExpr \"%s\"\n", p->name);
 		p = evalExpr(p);
+		printf("***************\n***p->name after evalExpr \"%s\"\n", p->name);
 		p = altExpr(p);
+		printf("***************\n***p->name after altExpr \"%s\"\n", p->name);
 		p = evalExpr(p);
+		printf("***************\n***p->name after evalExpr \"%s\"\n", p->name);
 		p = distExpr(p);
+		printf("***************\n***p->name after distExpr \"%s\"\n", p->name);
 		p = evalExpr(p);
+		printf("***************\n***p->name after evalExpr \"%s\"\n", p->name);
 		p = expExpr(p);
+		printf("***************\n***p->name after expExpr \"%s\"\n", p->name);
 		p = evalExpr(p);
+		printf("***************\n***p->name after evalExpr \"%s\"\n", p->name);
 		p = commExpr(p);
+		printf("***************\n***p->name after commExpr \"%s\"\n", p->name);
 		p = evalExpr(p);
+		printf("***************\n***p->name after evalExpr \"%s\"\n", p->name);
+		p = sortExpr(p);
+		printf("***************\n***p->name after sortExpr \"%s\"\n", p->name);
+		printf("***************\n***p->name  \"%s\" (LOOP END)\n", p->name);
 	} while (strcmp(prev_p, p->name) != 0);
 
 	p = displayExpr(p);

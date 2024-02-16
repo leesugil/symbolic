@@ -284,16 +284,37 @@ void parseSymbName(char w[], char *name)
 	if (name == NULL)
 		return;
 	/* case f(x, y) * z */
+	/* case f(x + dx) - f(x) */
 
 	char *s = strstr(name, "(");
 	if (s != NULL) {
 		parseFuncName(w, name);
 		if (strlen(w) > 0)
 			bcutstr(w);
-		//strncpy(w, name, s - name);
-		//w[s - name] = '\0';
 	} else
 		strcpy(w, name);
+}
+void parseFuncArg(char arg[], char *name)
+{
+	arg[0] = '\0';
+	if (name == NULL || strlen(name) == 0)
+		return ;
+	if (name[strlen(name) - 1] != ')')
+		return ;
+	char line[MAXCHAR] = "";
+	strcpy(line, name);
+	while (is_outer_blocked_blk(line, block_start, block_end, NULL))
+		remove_outer_block_blk(line, block_start, block_end);
+	if (!is_blocked_properly_blk(line, block_start, block_end, NULL))
+		return;
+	char *s = strstr(line, "(");
+	if (s == NULL)
+		return ;
+	strcpy(arg, line);
+	fcutnstr(arg, s - line + 1);
+	bcutstr(arg);
+	if (!is_blocked_properly_blk(arg, block_start, block_end, NULL))
+		arg[0] = '\0';
 }
 void parseFuncName(char w[], char *name)
 {
@@ -307,8 +328,13 @@ void parseFuncName(char w[], char *name)
 		return;
 
 	/* case f((x)) */
+	/* case f(x + dx) - f(x) */
 	char *s = strstr(name, "(");
-	if (s != NULL) {
+	if (s != NULL) {					// f(
+		char arg[MAXCHAR] = "";
+		parseFuncArg(arg, name);
+		if (strlen(arg) == 0)
+			return;
 		strncpy(w, name, s - name + 1);
 		w[s - name + 1] = '\0';
 	} else
@@ -510,7 +536,7 @@ Symb *restoreVarName(Symb *p)
 void evalSymb(char w[], char *name, Symb *tree)
 {
 	char *prog = "evalSymb";
-	fprintf(stderr, "%s: START \n", prog);
+	fprintf(stdout, "%s: START \n", prog);
 
 	if (w == NULL || name == NULL || tree == NULL)
 		return ;
@@ -523,15 +549,15 @@ void evalSymb(char w[], char *name, Symb *tree)
 	parseFuncName(func_name, name);		// f( or ""
 	parseSymbName(symb_name, name);
 
-	fprintf(stderr, "%s: input name: \"%s\"\n", prog, name);
-	fprintf(stderr, "%s: func_name: \"%s\"\n", prog, func_name);
-	fprintf(stderr, "%s: symb_name: \"%s\"\n", prog, symb_name);
+	fprintf(stdout, "%s: input name: \"%s\"\n", prog, name);
+	fprintf(stdout, "%s: func_name: \"%s\"\n", prog, func_name);
+	fprintf(stdout, "%s: symb_name: \"%s\"\n", prog, symb_name);
 
 	Symb *p = getSymb(tree, symb_name);
 	if (p == NULL) {
-			strcpy(w, symb_name);	// no need to parenthesize
-			fprintf(stderr, "%s: \"%s\" not found in the symbol tree\n", prog, symb_name);
-			return ;
+		strcpy(w, symb_name);	// no need to parenthesize
+		fprintf(stdout, "%s: \"%s\" not found in the symbol tree\n", prog, symb_name);
+		return ;
 	}
 	/* g = G * M * m / r^2
 	 * g */
@@ -542,28 +568,29 @@ void evalSymb(char w[], char *name, Symb *tree)
 				parenthstr(w);
 			} else
 				strcpy(w, symb_name);
-			fprintf(stderr, "%s: evaluated formula = \"%s\"\n", prog, w);
-			fprintf(stderr, "%s: END \n", prog);
+			fprintf(stdout, "%s: evaluated formula = \"%s\"\n", prog, w);
+			fprintf(stdout, "%s: END \n", prog);
 			return;
 		} else {
 			strcpy(w, symb_name);	// no need to parenthesize
-			fprintf(stderr, "%s: evaluated formula = \"%s\"\n", prog, w);
-			fprintf(stderr, "%s: END \n", prog);
+			fprintf(stdout, "%s: evaluated formula = \"%s\"\n", prog, w);
+			fprintf(stdout, "%s: END \n", prog);
 			return ;
 		}
 	}
 	if (strcmp(func_name, p->func_name) != 0) {
 		/* return the initially registered form */
-		fprintf(stderr, "%s: symbol info found but argument information mismatch, returning the originally registered form\n", prog);
-		fprintf(stderr, "%s: input \"%s\"\n", prog, name);
-		fprintf(stderr, "%s: func_name \"%s\"\n", prog, func_name);
-		fprintf(stderr, "%s: p->func_name \"%s\"\n", prog, p->func_name);
+		fprintf(stdout, "%s: symbol info found but argument information mismatch, returning the originally registered form\n", prog);
+		fprintf(stdout, "%s: input \"%s\"\n", prog, name);
+		fprintf(stdout, "%s: func_name \"%s\"\n", prog, func_name);
+		fprintf(stdout, "%s: p->func_name \"%s\"\n", prog, p->func_name);
 		p = restoreVarName(p);
-		fprintf(stderr, "%s: returning p->formula->name \"%s\"\n", prog, p->formula->name);
+		fprintf(stdout, "%s: returning p->formula->name \"%s\"\n", prog, p->formula->name);
 		strcpy(w, p->formula->name);
-		fprintf(stderr, "%s: END \n", prog);
+		fprintf(stdout, "%s: END \n", prog);
 		return ;
 	}
+
 	/* make a copy of s? maybe not needed. instead call restoreVarName at the end of each of this call.
 	 * restoreVarName added.
 	 * (without restoreVarName, the expression for the formula of a Symb from listSymb could be funny as the static full_name and dynamic formula->name are used at the same time. */
@@ -584,28 +611,31 @@ void evalSymb(char w[], char *name, Symb *tree)
 									 ==> f(g(x^2 + 1))
 									 ==> f(2 * (x^2 + 1) + 3)
 									 and running updateVarName once. */
-	fprintf(stderr, "%s:listSymb of p->name:%s(before)\n", prog, p->name);
+	fprintf(stdout, "%s:listSymb of p->name:%s(before)\n", prog, p->name);
 	//listSymb(p);
 	listSymb(p);
 	Var *v = NULL;
 	char line[MAXCHAR] = "";
 	for (int i = 0; i < MAXVAR && (v = p->var[i]) != NULL; i++) {
 		evalSymb(line, v->name, tree);
-		fprintf(stderr, "%s:at p:%s, var[i]->name:%s(before)\n", prog, p->name, v->name);
-		strcpy(v->name, line);
-		fprintf(stderr, "%s:at p:%s, var[i]->name:%s(after)\n", prog, p->name, v->name);
+		fprintf(stdout, "%s:at p:%s, var[i]->name:%s(before)\n", prog, p->name, v->name);
+		if (strlen(line) > 0)
+			strcpy(v->name, line);
+		// this is a problem when v->name is like "x + dx",
+		// and evalSymb returning "" because they couldn't find anything.
+		fprintf(stdout, "%s:at p:%s, var[i]->name:%s(after)\n", prog, p->name, v->name);
 	}
-	fprintf(stderr, "%s:full_name:%s(before)\n", prog, p->full_name);
+	fprintf(stdout, "%s:full_name:%s(before)\n", prog, p->full_name);
 	p = updateSymbFullName(p);
-	fprintf(stderr, "%s:full_name:%s(after)\n", prog, p->full_name);
+	fprintf(stdout, "%s:full_name:%s(after)\n", prog, p->full_name);
 	p = updateVarName(p, p->full_name);
-	fprintf(stderr, "%s:listSymb of p->name:%s(after)\n", prog, p->name);
+	fprintf(stdout, "%s:listSymb of p->name:%s(after)\n", prog, p->name);
 	//listSymb(p);
 	listSymb(p);
 	strcpy(w, p->formula->name);
 	p = restoreVarName(p);
 
-	fprintf(stderr, "%s: END \n", prog);
+	fprintf(stdout, "%s: END \n", prog);
 }
 void testevalSymb(void)
 {

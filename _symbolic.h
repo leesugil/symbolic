@@ -17,7 +17,7 @@
 Symb *updateSymb(Symb *p, Expr *q)
 {
 	char *prog = "updateSymb";
-	fprintf(stderr, "%s: expr->name:\"%s\"\n", prog, q->name);
+	fprintf(stdout, "%s: expr->name:\"%s\"\n", prog, q->name);
 
 	if (q == NULL)
 		return p;
@@ -28,9 +28,10 @@ Symb *updateSymb(Symb *p, Expr *q)
 	char line[MAXCHAR] = "";
 	char *right = (q->right == NULL) ? NULL : q->right->name;
 
+	fprintf(stdout, "%s: expr->op:\"%s\"\n", prog, q->op);
 	if (strcmp(q->op, " = ") == 0 || strcmp(q->op, " =") == 0) {
 		/* add/update symbol */
-		fprintf(stderr, "%s: add/update a symbol with \"%s\" = \"%s\"\n", prog, q->left->name, q->right->name);
+		fprintf(stdout, "%s: add/update a symbol with \"%s\" = \"%s\"\n", prog, q->left->name, q->right->name);
 		p = addSymb(p, q->left->name, right);
 	}
 
@@ -56,7 +57,17 @@ void testupdateSymb(void)
 	listSymb(symb_tree);
 
 	line = "f(x, y) = x^2 + x * y + y^2";
-	printf("-- the case %s\n", line);
+	printf("-- the case \"%s\"\n", line);
+	removeExpr(&p);
+	p = addExpr(p, line);
+	symb_tree = updateSymb(symb_tree, p);
+	printf("-- listExpr\n");
+	listExpr(p);
+	printf("-- listSymb\n");
+	listSymb(symb_tree);
+
+	line = "x = x";
+	printf("-- the case \"%s\"\n", line);
 	removeExpr(&p);
 	p = addExpr(p, line);
 	symb_tree = updateSymb(symb_tree, p);
@@ -98,8 +109,8 @@ Expr *__updateExpr(Expr *p, Symb *root)
 	if (p == NULL)
 		return NULL;
 
-	fprintf(stderr, "%s: START\n", prog);
-	fprintf(stderr, "%s: p->name:\"%s\"\n", prog, p->name);
+	fprintf(stdout, "%s: START\n", prog);
+	fprintf(stdout, "%s: p->name:\"%s\"\n", prog, p->name);
 
 	Symb *q = NULL;
 	/* check if of the form f(x + dx, y)
@@ -110,47 +121,24 @@ Expr *__updateExpr(Expr *p, Symb *root)
 	parseFuncName(func_name, p->name);
 	parseSymbName(symb_name, p->name);
 	/* h(x) = f(x) */
-	fprintf(stderr, "%s: func_name \"%s\" is parsed from p->name \"%s\"\n", prog, func_name, p->name);
-	fprintf(stderr, "%s: symb_name \"%s\"\n", prog, symb_name);
+	fprintf(stdout, "%s: func_name \"%s\" is parsed from p->name \"%s\"\n", prog, func_name, p->name);
+	fprintf(stdout, "%s: symb_name \"%s\"\n", prog, symb_name);
 	if (strlen(symb_name) > 0) {
 		if ((q = getSymb(root, symb_name)) != NULL) {			/* f */
-			fprintf(stderr, "%s: symb_name \"%s\" detected in the symbol tree\n", prog, symb_name);
+			fprintf(stdout, "%s: symb_name \"%s\" detected in the symbol tree\n", prog, symb_name);
 			char line[MAXCHAR] = "", prev[MAXCHAR] = "";
-			fprintf(stderr, "%s: evaluating \"%s\"...\n", prog, p->name);
-			// the problem is when
-			// the evaluated result is
-			// like h ==> f((x))
-			// and then reading left from here
-			// withouth further updating f((x)).
-			// what if h(x) = f(g(x)) so
-			// h ==> f(g(x))
-			//   ==> g(x)
-			//   ==> x^2 + 1
-			// evalSymb is required?
-			// no, when evalSymb(x^2 + 1), this logic fails.
-			//do {
-			//	strcpy(prev, line);
-			//	evalSymb(line, p->name, root);
-			//	parenthstr(line);
-			//	removeExpr(&p);
-			//	p = addExpr(p, line);
-			//} while (strcmp(prev, line) != 0);
+			fprintf(stdout, "%s: evaluating \"%s\"...\n", prog, p->name);
 			evalSymb(line, p->name, root);
-			fprintf(stderr, "%s: ########### evaluated \"%s\":%s\n", prog, symb_name, line);
+			fprintf(stdout, "%s: ########### evaluated \"%s\":%s\n", prog, symb_name, line);
 			parenthstr(line);
 			removeExpr(&p);
 			p = addExpr(p, line);
 			listExpr(p);
 		} else
-			fprintf(stderr, "%s: symbol not found, no changes made\n", prog);
+			fprintf(stdout, "%s: symbol not found, no changes made\n", prog);
 	}
 
-	//fprintf(stderr, "%s: moving to left from \"%s\"\n", prog, p->name);
-	//p->left = __updateExpr(p->left, root);
-	//fprintf(stderr, "%s: moving to right from \"%s\"\n", prog, p->name);
-	//p->right = __updateExpr(p->right, root);
-
-	fprintf(stderr, "%s: END\n", prog);
+	fprintf(stdout, "%s: END\n", prog);
 
 	return p;
 }
@@ -160,6 +148,8 @@ Expr *_updateExpr(Expr *p, Symb *root)
 
 	if (p == NULL)
 		return p;
+	
+	fprintf(stdout, "%s: START \"%s\"\n", prog, p->name);
 
 	char prev[MAXCHAR] = "";
 
@@ -168,10 +158,12 @@ Expr *_updateExpr(Expr *p, Symb *root)
 		p = __updateExpr(p, root);
 	} while (strcmp(prev, p->name) != 0);
 
-	fprintf(stderr, "%s: moving to left from \"%s\"\n", prog, p->name);
-	p->left = __updateExpr(p->left, root);
-	fprintf(stderr, "%s: moving to right from \"%s\"\n", prog, p->name);
-	p->right = __updateExpr(p->right, root);
+	fprintf(stdout, "%s: moving to left from \"%s\"\n", prog, p->name);
+	p->left = _updateExpr(p->left, root);
+	fprintf(stdout, "%s: moving to right from \"%s\"\n", prog, p->name);
+	p->right = _updateExpr(p->right, root);
+
+	fprintf(stdout, "%s: END \"%s\"\n", prog, p->name);
 
 	return p;
 }
