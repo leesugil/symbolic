@@ -31,7 +31,10 @@
 *.out
 *.app
 a.out*
+a.out.dSYM/Contents
 /*dSYM
+a.out.dSYM/Contents
+.DS_Store
 
 # Temporary files or folders
 tmp*
