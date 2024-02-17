@@ -31,8 +31,8 @@ int main()
 	char *s = NULL;
 	size_t maxline = 0;
 	while (getline(&s, &maxline, stdin) > 0) {
-		printf("listSymb (before)\n");
-		listSymb(symb_tree);
+		//printf("listSymb (before)\n");
+		//listSymb(symb_tree);
 		removeExpr(&p);
 		p = addExpr(p, s);
 		/* flow control */
@@ -40,8 +40,8 @@ int main()
 				strstr(s, ", ") != NULL) {
 			p = addExpr(p, line);
 			symb_tree = updateSymb(symb_tree, p);
-			printf("listSymb (after)\n");
-			listSymb(symb_tree);
+			//printf("listSymb (after)\n");
+			//listSymb(symb_tree);
 		} else {
 			p = processExpr(p);
 		}
@@ -84,31 +84,55 @@ Expr *processExpr(Expr *p)
 	} while (strcmp(prev_p, p->name) != 0);
 
 	do {
-		printf("***************\n***p->name (LOOP START)\"%s\"\n", p->name);
+		fprintf(stdout, "***************\n***p->name (LOOP START)\"%s\"\n", p->name);
+		fprintf(stdout, "***************\n***listExpr(p)******\n");
+		listExpr(p);
 		strcpy(prev_p, p->name);
 		p = sortExpr(p);
-		printf("***************\n***p->name after sortExpr \"%s\"\n", p->name);
+		fprintf(stdout, "***************\n***p->name after sortExpr \"%s\"\n", p->name);
+		fprintf(stdout, "***************\n***listExpr(p)******\n");
+		listExpr(p);
 		p = evalExpr(p);
-		printf("***************\n***p->name after evalExpr \"%s\"\n", p->name);
+		fprintf(stdout, "***************\n***p->name after evalExpr \"%s\"\n", p->name);
+		fprintf(stdout, "***************\n***listExpr(p)******\n");
+		listExpr(p);
 		p = altExpr(p);
-		printf("***************\n***p->name after altExpr \"%s\"\n", p->name);
+		fprintf(stdout, "***************\n***p->name after altExpr \"%s\"\n", p->name);
+		fprintf(stdout, "***************\n***listExpr(p)******\n");
+		listExpr(p);
 		p = evalExpr(p);
-		printf("***************\n***p->name after evalExpr \"%s\"\n", p->name);
+		fprintf(stdout, "***************\n***p->name after evalExpr \"%s\"\n", p->name);
+		fprintf(stdout, "***************\n***listExpr(p)******\n");
+		listExpr(p);
 		p = distExpr(p);
-		printf("***************\n***p->name after distExpr \"%s\"\n", p->name);
+		fprintf(stdout, "***************\n***p->name after distExpr \"%s\"\n", p->name);
+		fprintf(stdout, "***************\n***listExpr(p)******\n");
+		listExpr(p);
 		p = evalExpr(p);
-		printf("***************\n***p->name after evalExpr \"%s\"\n", p->name);
+		fprintf(stdout, "***************\n***p->name after evalExpr \"%s\"\n", p->name);
+		fprintf(stdout, "***************\n***listExpr(p)******\n");
+		listExpr(p);
 		p = expExpr(p);
-		printf("***************\n***p->name after expExpr \"%s\"\n", p->name);
+		fprintf(stdout, "***************\n***p->name after expExpr \"%s\"\n", p->name);
+		fprintf(stdout, "***************\n***listExpr(p)******\n");
+		listExpr(p);
 		p = evalExpr(p);
-		printf("***************\n***p->name after evalExpr \"%s\"\n", p->name);
+		fprintf(stdout, "***************\n***p->name after evalExpr \"%s\"\n", p->name);
+		fprintf(stdout, "***************\n***listExpr(p)******\n");
+		listExpr(p);
 		p = commExpr(p);
-		printf("***************\n***p->name after commExpr \"%s\"\n", p->name);
+		fprintf(stdout, "***************\n***p->name after commExpr \"%s\"\n", p->name);
+		fprintf(stdout, "***************\n***listExpr(p)******\n");
+		listExpr(p);
 		p = evalExpr(p);
-		printf("***************\n***p->name after evalExpr \"%s\"\n", p->name);
+		fprintf(stdout, "***************\n***p->name after evalExpr \"%s\"\n", p->name);
+		fprintf(stdout, "***************\n***listExpr(p)******\n");
+		listExpr(p);
 		p = sortExpr(p);
-		printf("***************\n***p->name after sortExpr \"%s\"\n", p->name);
-		printf("***************\n***p->name  \"%s\" (LOOP END)\n", p->name);
+		fprintf(stdout, "***************\n***p->name after sortExpr \"%s\"\n", p->name);
+		fprintf(stdout, "***************\n***listExpr(p)******\n");
+		listExpr(p);
+		fprintf(stdout, "***************\n***p->name  \"%s\" (LOOP END)\n", p->name);
 	} while (strcmp(prev_p, p->name) != 0);
 
 	p = displayExpr(p);

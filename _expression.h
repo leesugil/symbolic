@@ -313,28 +313,21 @@ Expr *parseExprFunc(Expr *p)
 		return p;
 	}
 
-	char *s = strstr(p->name, "(");
+	char func_name[MAXCHAR] = "", symb_name[MAXCHAR] = "", arg[MAXCHAR] = "";
+	/* f */
+	parseFuncName(func_name, p->name);
+	parseSymbName(symb_name, p->name);
+	/* x */
+	parseFuncArg(arg, p->name);
 
-	if (s == NULL) {
+	if (strlen(func_name) == 0) {
 		fprintf(stderr, "%s: no function detected, returning p\n", prog);
 		return p;
 	}
 
-	char func_name[MAXCHAR] = "", symb_name[MAXCHAR] = "";
-	/* f */
-	strcpy(func_name, p->name);
-	bcutnstr(func_name, strlen(s) - 1);
-	strcpy(symb_name, func_name);
-	if (func_name[strlen(func_name) - 1] == '(')
-		bcutstr(symb_name);
-	/* x */
-	char x[MAXCHAR] = "";
-	strcpy(x, s);
-	remove_outer_block_blk(x, block_start, block_end);
-
 	strcpy(p->op, " () ");
 	p->left = addExpr(p->left, symb_name);
-	p->right = addExpr(p->right, x);
+	p->right = addExpr(p->right, arg);
 
 	return p;
 }
@@ -1398,12 +1391,17 @@ Expr *_sortExpr(Expr *p)
 void _genSV(char w[], Node *node, char *delimiter);
 void genSV(char w[], Node *node, char *delimiter)
 {
+	char *prog = "genSV";
+
 	w[0] = '\0';
 	if (delimiter == NULL)
 		delimiter = "";
 	_genSV(w, node, delimiter);
-	if (strlen(w) > strlen(delimiter))
+	if (strlen(w) > strlen(delimiter)) {
+		fprintf(stdout, "%s: bcutnstr: \"%s\"\t(before)\n", prog, w);
 		bcutnstr(w, strlen(delimiter));
+		fprintf(stdout, "%s: bcutnstr: \"%s\"\t(after)\n", prog, w);
+	}
 }
 void _genSV(char w[], Node *node, char *delimiter)
 {
@@ -1422,6 +1420,7 @@ void testsortExpr(void)
 	line = "1 * a * 3 * b";
 	line = "1 + ((b * a) * 3)";
 	line = "(((dx + x)^2) * (dx^-1)) + ((-1 * (x^2)) * (dx^-1))";
+	line = "(c + (((dx * b) + (x * b)) + (((dx + x)^2) * a))) + ((-1 * (a * (x^2))) + ((-1 * (b * x)) + (-1 * c)))";
 	//line = "a * -1 * b^1";
 	Expr *p = NULL;
 	op_tree = loadOps(op_tree);
@@ -1897,10 +1896,15 @@ void testremoveExprParenth(void)
 	char *line = "a * b + c * (d + e)";
 	line = "(((dx + x)^2) * (dx^-1)) + ((-1 * (x^2)) * (dx^-1))";
 	line = "a * (b * (c + d))";
+	line = "((dx + x)^2) * (a * dx^-1) + (-1 * (b * x * dx^-1)  + -1 * (a * x^2 * dx^-1) + -1 * (c * dx^-1) + b + b * (dx^-1 * x) + c * (dx^-1)";
+	line = "((dx + x)^2) * (a * dx^-1) + (-1 * (b * x * dx^-1)) + -1 * (a * x^2 * dx^-1) + -1 * (c * dx^-1) + b + b * (dx^-1 * x) + c * (dx^-1)";
+	line = "(c + (((dx * b) + (x * b)) + (((dx + x)^2) * a))) + ((-1 * (a * (x^2))) + ((-1 * (b * x)) + (-1 * c)))";
 
 	p = addExpr(p, line);
+	printf("listExpr before removeExprParenth\n");
 	listExpr(p);
 
+	printf("listExpr after removeExprParenth\n");
 	p = removeExprParenth(p);
 	listExpr(p);
 }
