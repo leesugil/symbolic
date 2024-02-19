@@ -220,9 +220,7 @@ Expr *parseExpr(Expr *p)
 	}
 
 	// make sure there're no redundant outer blocks
-	while (is_outer_blocked_blk(p->name, block_start, block_end, NULL)) {
-		remove_outer_block_blk(p->name, block_start, block_end);
-	}
+	remove_outer_blocks_blk(p->name, block_start, block_end);
 
 	/* see if it's about definition,
 	 * first by commas ',' */
@@ -426,9 +424,7 @@ void parseExprLeft(char w[], char *line, Op *op, char **b_start, char **b_end)
 	strcpy(w, line);
 	firstnstr(w, strlen(line) - strlen(q));
 	// make sure there're no redundant outer blocks
-	while (is_outer_blocked_blk(w, block_start, block_end, NULL)) {
-		remove_outer_block_blk(w, block_start, block_end);
-	}
+	remove_outer_blocks_blk(w, block_start, block_end);
 	// determine if parentheses are needed
 	//if (p->left == NULL)
 	//	return;
@@ -509,9 +505,7 @@ void parseExprRight(char w[], char *line, Op *op, char **b_start, char **b_end)
 	strcpy(w, q);
 	fcutnstr(w, strlen(op->name));
 	// make sure there're no redundant outer blocks
-	while (is_outer_blocked_blk(w, block_start, block_end, NULL)) {
-		remove_outer_block_blk(w, block_start, block_end);
-	}
+	remove_outer_blocks_blk(w, block_start, block_end);
 }
 void testparseExprRight(void)
 {
@@ -1374,15 +1368,18 @@ Expr *_sortExpr(Expr *p)
 	Node *node = NULL;
 	char *line = p->name;
 	char w[MAXCHAR] = "";
+	fprintf(stderr, "%s: working on \"%s\"\n", prog, p->name);
 	while (strlen(line) > 0) {
 		fprintf(stderr, "%s: parsing variables from \"%s\"\n", prog, line);
 		line = parseSVmaskblk(w, line, op->name, block_start, block_end);
-		while (is_outer_blocked_blk(w, block_start, block_end, NULL))
-			remove_outer_block_blk(w, block_start, block_end);
+		fprintf(stderr, "%s: op: \"%s\", parsed var: \"%s\"\n", prog, p->op, w);
+		remove_outer_blocks_blk(w, block_start, block_end);
 		node = addNode(node, w);
+		fprintf(stderr, "%s: op: \"%s\", parsed var: \"%s\"\n", prog, p->op, w);
 	}
 	//listNode(node);
 	genSV(w, node, op->name);
+	fprintf(stderr, "%s: outcome \"%s\"\n", prog, w);
 	removeExpr(&p);
 	p = addExpr(p, w);
 
@@ -1398,19 +1395,22 @@ void genSV(char w[], Node *node, char *delimiter)
 		delimiter = "";
 	_genSV(w, node, delimiter);
 	if (strlen(w) > strlen(delimiter)) {
-		fprintf(stdout, "%s: bcutnstr: \"%s\"\t(before)\n", prog, w);
+		fprintf(stderr, "%s: bcutnstr: \"%s\"\t(before)\n", prog, w);
 		bcutnstr(w, strlen(delimiter));
-		fprintf(stdout, "%s: bcutnstr: \"%s\"\t(after)\n", prog, w);
+		fprintf(stderr, "%s: bcutnstr: \"%s\"\t(after)\n", prog, w);
 	}
 }
 void _genSV(char w[], Node *node, char *delimiter)
 {
+	char *prog = "_genSV";
+
 	if (node == NULL)
 		return ;
 	_genSV(w, node->left, delimiter);
 	while (node->count-- > 0) {
 		strcat(w, node->name);
 		strcat(w, delimiter);
+		fprintf(stderr, "%s: composed line: \"%s\"\n", prog, w);
 	}
 	_genSV(w, node->right, delimiter);
 }
@@ -1421,6 +1421,11 @@ void testsortExpr(void)
 	line = "1 + ((b * a) * 3)";
 	line = "(((dx + x)^2) * (dx^-1)) + ((-1 * (x^2)) * (dx^-1))";
 	line = "(c + (((dx * b) + (x * b)) + (((dx + x)^2) * a))) + ((-1 * (a * (x^2))) + ((-1 * (b * x)) + (-1 * c)))";
+	line = "c + ((dx * b + (x * b)) + (((dx + x)^2) * a)) + (-1 * (a * (x^2))) + ((-1 * (b * x)) + (-1 * c))";
+	line = "c + dx * b + x * b + (dx + x)^2 * a + -1 * a * x^2 + -1 * b * x + -1 * c";
+	line = "dx * b + x * b + (dx + x)^2 * a + -1 * a * x^2 + -1 * b * x";
+	line = "dx * b + x * b + (dx + x)^2 * a + -1 * a * x^2 + -1 * b * x";
+	line = "b * x + (((dx + x)^2) * a) + (-1 * (a * x^2) + -1 * (b * x))";
 	//line = "a * -1 * b^1";
 	Expr *p = NULL;
 	op_tree = loadOps(op_tree);

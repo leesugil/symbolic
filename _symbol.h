@@ -276,81 +276,6 @@ void removeSymb(Symb **p)
 	*p = NULL;
 }
 
-/*
-void parseSymbName(char w[], char *name)
-{
-	char *prog = "parseSymbName";
-
-	if (w == NULL)
-		return;
-	w[0] = '\0';
-	if (name == NULL)
-		return;
-	// case f(x, y) * z //
-	// case f(x + dx) - f(x) //
-
-	char *s = strstr(name, "(");
-	if (s != NULL) {
-		parseFuncName(w, name);
-		if (strlen(w) > 0) {
-			fprintf(stdout, "%s: bcutstr: \"%s\"\t(before)\n", prog, w);
-			bcutstr(w);
-			fprintf(stdout, "%s: bcutstr: \"%s\"\t(after)\n", prog, w);
-		}
-	} else
-		strcpy(w, name);
-}
-void parseFuncArg(char arg[], char *name)
-{
-	char *prog = "parseFuncArg";
-
-	arg[0] = '\0';
-	if (name == NULL || strlen(name) == 0)
-		return ;
-	if (name[strlen(name) - 1] != ')')
-		return ;
-	char line[MAXCHAR] = "";
-	strcpy(line, name);
-	while (is_outer_blocked_blk(line, block_start, block_end, NULL))
-		remove_outer_block_blk(line, block_start, block_end);
-	if (!is_blocked_properly_blk(line, block_start, block_end, NULL))
-		return;
-	char *s = strstr(line, "(");
-	if (s == NULL)
-		return ;
-	strcpy(arg, line);
-	fcutnstr(arg, s - line + 1);
-	fprintf(stdout, "%s: bcutstr: \"%s\"\t(before)\n", prog, arg);
-	bcutstr(arg);
-	fprintf(stdout, "%s: bcutstr: \"%s\"\t(after)\n", prog, arg);
-	if (!is_blocked_properly_blk(arg, block_start, block_end, NULL))
-		arg[0] = '\0';
-}
-void parseFuncName(char w[], char *name)
-{
-	if (w == NULL)
-		return;
-	w[0] = '\0';
-	if (name == NULL)
-		return;
-	// case f(x, y) * z //
-	if (strlen(name) == 0 || name[strlen(name) - 1] != ')')
-		return;
-
-	// case f((x)) //
-	// case f(x + dx) - f(x) /
-	char *s = strstr(name, "(");
-	if (s != NULL) {					// f(
-		char arg[MAXCHAR] = "";
-		parseFuncArg(arg, name);
-		if (strlen(arg) == 0)
-			return;
-		strncpy(w, name, s - name + 1);
-		w[s - name + 1] = '\0';
-	} else
-		w[0] = '\0';
-}
-*/
 char *_parseVarName(char w[], char *name);
 Symb *parseVarName(Symb *p, char *name)		// p->var[i]->name
 {
@@ -412,8 +337,7 @@ char *_parseVarName(char w[], char *name)
 	while (isspace(w[strlen(w) - 1]))
 		w[strlen(w) - 1] = '\0';
 	fprintf(stderr, "%s: parsed variable name: \"%s\"\n", prog, w);
-	while (is_outer_blocked_blk(w, block_start, block_end, NULL))
-		remove_outer_block_blk(w, block_start, block_end);
+	remove_outer_blocks_blk(w, block_start, block_end);
 	fprintf(stderr, "%s: blocks removed: \"%s\"\n", prog, w);
 	
 	return ++q;
@@ -470,14 +394,13 @@ Symb *updateSymbFullName(Symb *p)
 	for (int i = 0; i < MAXVAR && (v = p->var[i]) != NULL; i++) {
 		//sprintf(line, "%s, ", v->initname);	this feature has been replaced by running restoreVarName and then updateSymbFullName
 		strcpy(var_name, v->name);
-		while (is_outer_blocked_blk(var_name, block_start, block_end, NULL))
-			remove_outer_block_blk(var_name, block_start, block_end);
+		remove_outer_blocks_blk(var_name, block_start, block_end);
 		sprintf(line, "%s, ", var_name);
 		strcat(p->full_name, line);
 	}
-	fprintf(stdout, "%s: bcutnstr: \"%s\"\t(before)\n", prog, p->full_name);
+	fprintf(stderr, "%s: bcutnstr: \"%s\"\t(before)\n", prog, p->full_name);
 	bcutnstr(p->full_name, 2);
-	fprintf(stdout, "%s: bcutnstr: \"%s\"\t(after)\n", prog, p->full_name);
+	fprintf(stderr, "%s: bcutnstr: \"%s\"\t(after)\n", prog, p->full_name);
 	strcat(p->full_name, ")");
 
 	return p;
@@ -557,8 +480,7 @@ void evalSymb(char w[], char *name, Symb *tree)
 		return ;
 	w[0] = '\0';
 
-	while (is_outer_blocked_blk(w, block_start, block_end, NULL))
-		remove_outer_block_blk(w, block_start, block_end);
+	remove_outer_blocks_blk(w, block_start, block_end);
 
 	char func_name[MAXCHAR] = "", symb_name[MAXCHAR] = "";
 	parseFuncName(func_name, name);		// f( or ""
