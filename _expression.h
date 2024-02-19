@@ -1866,6 +1866,7 @@ Expr *removeExprParenth(Expr *p)
 				parenthstr(line);	// right-assoc but not left, so
 									// got to be empahsized
 		} else if (op_left->order < op->order) {	// rank diff
+			fprintf(stdout, "%s: rank difference, op_left->order %d vs %d op->order\n", prog, op_left->order, op->order);
 			parenthstr(line);
 		} else {
 			for (int i = 0; op->left_dist_over[i] != NULL; i++)	// left_dist_over
@@ -1904,6 +1905,7 @@ void testremoveExprParenth(void)
 	line = "((dx + x)^2) * (a * dx^-1) + (-1 * (b * x * dx^-1)  + -1 * (a * x^2 * dx^-1) + -1 * (c * dx^-1) + b + b * (dx^-1 * x) + c * (dx^-1)";
 	line = "((dx + x)^2) * (a * dx^-1) + (-1 * (b * x * dx^-1)) + -1 * (a * x^2 * dx^-1) + -1 * (c * dx^-1) + b + b * (dx^-1 * x) + c * (dx^-1)";
 	line = "(c + (((dx * b) + (x * b)) + (((dx + x)^2) * a))) + ((-1 * (a * (x^2))) + ((-1 * (b * x)) + (-1 * c)))";
+	line = "(c + (((dx * b) + (x * b)) + (((dx + x)^2) * a)))";
 
 	p = addExpr(p, line);
 	printf("listExpr before removeExprParenth\n");
