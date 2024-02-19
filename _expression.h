@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include "qol/c/getword.h"
+#include "qol/c/getmath.h"
 #include "qol/c/tree.h"
 
 #include "operation.h"
@@ -1383,6 +1384,8 @@ Expr *_sortExpr(Expr *p)
 	}
 	//listNode(node);
 	genSV(w, node, op->name);
+	removeNode(node);
+	node = NULL;
 	removeExpr(&p);
 	p = addExpr(p, w);
 

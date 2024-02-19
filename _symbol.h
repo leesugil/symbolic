@@ -5,6 +5,7 @@
 #include <stdlib.h>
 
 #include "qol/c/getword.h"
+#include "qol/c/getmath.h"
 #include "expression.h"
 
 #define MAXVAR 10
