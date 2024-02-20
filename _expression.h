@@ -1391,32 +1391,6 @@ Expr *_sortExpr(Expr *p)
 
 	return p;
 }
-void _genSV(char w[], Node *node, char *delimiter);
-void genSV(char w[], Node *node, char *delimiter)
-{
-	char *prog = "genSV";
-
-	w[0] = '\0';
-	if (delimiter == NULL)
-		delimiter = "";
-	_genSV(w, node, delimiter);
-	if (strlen(w) > strlen(delimiter)) {
-		fprintf(stdout, "%s: bcutnstr: \"%s\"\t(before)\n", prog, w);
-		bcutnstr(w, strlen(delimiter));
-		fprintf(stdout, "%s: bcutnstr: \"%s\"\t(after)\n", prog, w);
-	}
-}
-void _genSV(char w[], Node *node, char *delimiter)
-{
-	if (node == NULL)
-		return ;
-	_genSV(w, node->left, delimiter);
-	while (node->count-- > 0) {
-		strcat(w, node->name);
-		strcat(w, delimiter);
-	}
-	_genSV(w, node->right, delimiter);
-}
 void testsortExpr(void)
 {
 	char *line = "x * -.14 / G * m * F";
